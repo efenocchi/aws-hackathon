@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Auto-bump version and create release
+    runs-on: ubuntu-latest
+    concurrency:
+      # Serialize releases: a second push landing while the first run is
+      # between its bump commit and the release creation would race on the
+      # push or double-bump.
+      group: aas-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 22
+
+      - name: Check if version was already bumped in this push
+        id: check_bump
+        run: |
+          # Query CURRENT origin/main HEAD, not the event checkout: on a
+          # workflow re-run the event SHA may be stale and the guard would
+          # consult an older commit message, double-bumping the version.
+          git fetch origin main --depth=1
+          COMMIT_MSG=$(git log -1 --pretty=%B origin/main)
+          if echo "$COMMIT_MSG" | grep -qE "^release: v"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            # On a re-run after the bump already landed, the event checkout
+            # is the stale pre-bump SHA. Reset to current origin/main so the
+            # steps below read the post-bump version.
+            git reset --hard origin/main
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump patch version and push
+        if: steps.check_bump.outputs.skip == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          npm version patch --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          git add package.json
+          git commit -m "release: v$VERSION"
+          # Pushes made with the default GITHUB_TOKEN do not retrigger
+          # workflows, so this cannot loop.
+          git push
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=v${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if release already exists
+        id: check
+        run: |
+          # Idempotency against the target system (the release registry),
+          # not git history: re-runs converge instead of failing on a
+          # duplicate tag.
+          if gh release view "${{ steps.version.outputs.version }}" &>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get merged PR title
+        if: steps.check.outputs.exists == 'false'
+        id: pr
+        run: |
+          PR_TITLE=$(gh pr list --state merged --base main --limit 1 --json title -q '.[0].title // ""')
+          echo "title=$PR_TITLE" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v3.0.0
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "${{ steps.version.outputs.version }} — ${{ steps.pr.outputs.title }}"
+          generate_release_notes: true
