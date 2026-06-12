@@ -283,3 +283,29 @@ video { width: 100%; border-radius: 20px; margin-top: 18px; background: var(--in
   cursor: pointer;
 }
 .empty { color: var(--ink-40); font-size: 13px; }
+
+/* OpenUI agent-designed deliverable view */
+.ouiWrap { margin-top: 18px; border: 1px solid var(--line); border-radius: 20px; padding: 20px; }
+.ouiLabel {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--warm-deep);
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+.ouiBoard { margin-bottom: 14px; }
+.ouiTagline {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+.ouiConcept { color: var(--ink-60); font-size: 14px; margin-top: 8px; line-height: 1.5; }
+.ouiVideo { width: 100%; border-radius: 16px; margin: 6px 0 14px; background: var(--ink); }
+.ouiShots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.ouiShot { margin: 0; }
+.ouiShot img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 10px; }
+.ouiShot figcaption { font-size: 11.5px; margin-top: 5px; line-height: 1.4; }
+.ouiShot figcaption b { display: block; }
+.ouiShot figcaption span { color: var(--ink-40); }

@@ -1,5 +1,7 @@
 "use client";
 
+import { deliverableLibrary } from "@aas/openui-lib";
+import { Renderer } from "@openuidev/react-lang";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -48,6 +50,11 @@ const CATEGORY_STYLE: Record<string, { icon: string; bg: string }> = {
 };
 
 const CATEGORIES = ["all", "video", "design", "copywriting", "research", "engineering", "marketing", "data"];
+
+/** Local mp4 paths in agent-emitted OpenUI point at the API host. */
+function rewriteRenderUrls(openui: string): string {
+  return openui.replaceAll("/renders/", `${API}/renders/`);
+}
 
 export default function Store() {
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -279,7 +286,18 @@ function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
             {job.status === "failed" && <div style={{ color: "#e8927c" }}>✗ {job.error}</div>}
           </div>
         )}
-        {videoUrl && <video src={videoUrl} controls autoPlay loop />}
+        {job?.deliverable?.extras?.openui ? (
+          <div className="ouiWrap">
+            <div className="ouiLabel">Deliverable view — designed by {skill.ownerAgent} (OpenUI)</div>
+            <Renderer
+              response={rewriteRenderUrls(job.deliverable.extras.openui)}
+              library={deliverableLibrary}
+              isStreaming={false}
+            />
+          </div>
+        ) : (
+          videoUrl && <video src={videoUrl} controls autoPlay loop />
+        )}
       </div>
     </div>
   );

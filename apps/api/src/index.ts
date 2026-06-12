@@ -9,7 +9,10 @@ import type {
   Transaction,
 } from "@aas/contracts";
 import { complete, produceVideo } from "@aas/video-producer";
+import { OPENUI_SYSTEM_PROMPT } from "@aas/openui-lib";
 import { insertTransaction } from "./clickhouse.js";
+import { DEMO_CITIES, pointForecast } from "./jua.js";
+import { pioneerComplete, pioneerEnabled } from "./pioneer.js";
 import { SEED_SKILLS } from "./seed.js";
 
 const skills = new Map<string, SkillListing>(SEED_SKILLS.map((s) => [s.id, s]));
@@ -102,6 +105,33 @@ app.get("/renders/:file", async (c) => {
   return c.body(createReadStream(path) as unknown as ReadableStream);
 });
 
+/**
+ * OpenUI (sponsor): the seller agent designs its own deliverable view — the
+ * director emits OpenUI Lang that the storefront renders. Non-fatal on failure.
+ */
+async function attachOpenUI(job: JobStatus, log: (l: string) => void) {
+  if (!job.deliverable) return;
+  try {
+    log("🎨 Agent is designing its deliverable view (OpenUI)...");
+    const videoFile = job.deliverable.url.split("/").pop();
+    const data = {
+      concept: job.deliverable.extras?.concept,
+      tagline: job.deliverable.extras?.tagline,
+      shots: JSON.parse(job.deliverable.extras?.storyboard ?? "[]"),
+      keyframeUrls: JSON.parse(job.deliverable.extras?.keyframes ?? "[]"),
+      videoUrl: `/renders/${videoFile}`,
+    };
+    let openui = await complete(OPENUI_SYSTEM_PROMPT, JSON.stringify(data));
+    // Strip markdown fences / surrounding prose if the model added any.
+    const fence = openui.match(/```(?:\w+)?\n([\s\S]*?)```/);
+    if (fence) openui = fence[1];
+    job.deliverable.extras = { ...job.deliverable.extras, openui };
+    log("🎨 Deliverable view ready");
+  } catch (err) {
+    log(`⚠️ OpenUI view skipped: ${String((err as Error).message)}`);
+  }
+}
+
 function recordTransaction(tx: Transaction) {
   transactions.push(tx);
   void insertTransaction(tx); // no-op until CLICKHOUSE_URL is set
@@ -119,16 +149,45 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
     case "video-producer": {
       const result = await produceVideo(req.brief, { onProgress: log, params: req.params });
       job.deliverable = { url: result.videoUrl, extras: result.extras };
+      await attachOpenUI(job, log);
       break;
     }
     case "copywriter": {
-      log(`✍️ Copywriter drafting launch copy for: ${req.brief}`);
-      const copy = await complete(
-        "You are a senior launch copywriter. Given a brief, return markdown with: 3 headline options, a 2-paragraph announcement, and 2 short social post variants. Premium, confident voice. No preamble.",
-        req.brief,
-      );
-      job.deliverable = { url: `data:text/markdown`, extras: { copy } };
+      const COPY_SYSTEM =
+        "You are a senior launch copywriter. Given a brief, return markdown with: 3 headline options, a 2-paragraph announcement, and 2 short social post variants. Premium, confident voice. No preamble.";
+      // Pioneer (sponsor): adaptive inference that improves with traffic — every
+      // copy job routed through it is training signal. Claude fallback without key.
+      if (pioneerEnabled()) {
+        log(`✍️ Copywriter drafting via Pioneer adaptive inference: ${req.brief}`);
+        const copy = await pioneerComplete(COPY_SYSTEM, req.brief);
+        job.deliverable = { url: `data:text/markdown`, extras: { copy, provider: "pioneer" } };
+      } else {
+        log(`✍️ Copywriter drafting launch copy for: ${req.brief}`);
+        const copy = await complete(COPY_SYSTEM, req.brief);
+        job.deliverable = { url: `data:text/markdown`, extras: { copy, provider: "claude" } };
+      }
       log("✅ Copy delivered");
+      break;
+    }
+    case "weather-promo": {
+      // Jua (sponsor): real forecast for the launch city conditions the creative.
+      const city = Object.keys(DEMO_CITIES).find((c) =>
+        req.brief.toLowerCase().includes(c),
+      );
+      if (!city) {
+        log(`⚠️ No known city in brief — supported: ${Object.keys(DEMO_CITIES).join(", ")}`);
+        throw new Error("brief must name a launch city, e.g. \"perfume launch in Paris\"");
+      }
+      const [lat, lon] = DEMO_CITIES[city];
+      log(`🌍 Querying Jua earth model for ${city} (${lat}, ${lon})...`);
+      const forecast = await pointForecast(lat, lon, city);
+      log(`🌦️ Forecast retrieved — conditioning the creative on real weather`);
+      const result = await produceVideo(
+        `${req.brief}\n\nReal forecast data for ${city} (weave the actual conditions into the visual mood): ${forecast.summary}`,
+        { onProgress: log, params: req.params },
+      );
+      job.deliverable = { url: result.videoUrl, extras: { ...result.extras, forecast: forecast.summary.slice(0, 500) } };
+      await attachOpenUI(job, log);
       break;
     }
     default:

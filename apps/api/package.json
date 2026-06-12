@@ -9,10 +9,13 @@
   },
   "dependencies": {
     "@aas/contracts": "workspace:*",
+    "@aas/openui-lib": "workspace:^",
     "@aas/video-producer": "workspace:*",
     "@clickhouse/client": "^1.20.0",
     "@hono/node-server": "^1.13.0",
-    "hono": "^4.6.0"
+    "@openuidev/react-lang": "^0.2.6",
+    "hono": "^4.6.0",
+    "react": "^19.2.7"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
