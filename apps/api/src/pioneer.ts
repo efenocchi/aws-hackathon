@@ -8,7 +8,9 @@
 const BASE = process.env.PIONEER_BASE_URL ?? "https://api.pioneer.ai/v1";
 
 export function pioneerEnabled(): boolean {
-  return Boolean(process.env.PIONEER_API_KEY);
+  // Spend gate: a key in .env alone must not trigger paid calls (team policy —
+  // no paid API usage without explicit approval).
+  return Boolean(process.env.PIONEER_API_KEY) && process.env.PIONEER_SPEND_APPROVED === "1";
 }
 
 export async function pioneerComplete(system: string, user: string): Promise<string> {
