@@ -8,7 +8,8 @@ import type {
   SkillListing,
   Transaction,
 } from "@aas/contracts";
-import { produceVideo } from "@aas/video-producer";
+import { complete, produceVideo } from "@aas/video-producer";
+import { insertTransaction } from "./clickhouse.js";
 import { SEED_SKILLS } from "./seed.js";
 
 const skills = new Map<string, SkillListing>(SEED_SKILLS.map((s) => [s.id, s]));
@@ -103,7 +104,7 @@ app.get("/renders/:file", async (c) => {
 
 function recordTransaction(tx: Transaction) {
   transactions.push(tx);
-  // TODO(kamo): also insert into ClickHouse `transactions` table when CLICKHOUSE_URL is set.
+  void insertTransaction(tx); // no-op until CLICKHOUSE_URL is set
 }
 
 async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) {
@@ -120,8 +121,18 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
       job.deliverable = { url: result.videoUrl, extras: result.extras };
       break;
     }
+    case "copywriter": {
+      log(`✍️ Copywriter drafting launch copy for: ${req.brief}`);
+      const copy = await complete(
+        "You are a senior launch copywriter. Given a brief, return markdown with: 3 headline options, a 2-paragraph announcement, and 2 short social post variants. Premium, confident voice. No preamble.",
+        req.brief,
+      );
+      job.deliverable = { url: `data:text/markdown`, extras: { copy } };
+      log("✅ Copy delivered");
+      break;
+    }
     default:
-      // Other service skills are demo stubs until implemented.
+      // Remaining service skills are demo stubs until implemented.
       log(`Executing ${skill.name} for brief: ${req.brief}`);
       await new Promise((r) => setTimeout(r, 1500));
       job.deliverable = {

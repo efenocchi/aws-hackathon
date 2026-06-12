@@ -8,6 +8,8 @@ import { falRun, type FalImageResult, type FalVideoResult } from "./fal.js";
 
 const execFileP = promisify(execFile);
 
+export { complete, directStoryboard } from "./director.js";
+
 export interface ProduceOptions {
   onProgress?: (line: string) => void;
   params?: Record<string, unknown>;

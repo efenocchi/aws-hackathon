@@ -16,6 +16,9 @@ importers:
       '@aas/video-producer':
         specifier: workspace:*
         version: link:../../skills/video-producer
+      '@clickhouse/client':
+        specifier: ^1.20.0
+        version: 1.20.0
       '@hono/node-server':
         specifier: ^1.13.0
         version: 1.19.14(hono@4.12.25)
@@ -169,6 +172,13 @@ packages:
   '@aws/lambda-invoke-store@0.2.4':
     resolution: {integrity: sha512-iY8yvjE0y651BixKNPgmv1WrQc+GZ142sb0z4gYnChDDY2YqI4P/jsSopBWrKfAt7LOJAkOXt7rC/hms+WclQQ==}
     engines: {node: '>=18.0.0'}
+
+  '@clickhouse/client-common@1.20.0':
+    resolution: {integrity: sha512-s0oDSwxQyJO/Xwne6sNE7xTAlms72Hq2AHzHAB9oSOBfiaXTzQOyHQrhufJ9ldPJTwr4L47/RxG1i6I0I8Xy9A==}
+
+  '@clickhouse/client@1.20.0':
+    resolution: {integrity: sha512-LfHZ9bZZhc7KrNFVa9v73JMqwsP+m/5SgwdKMmxze4Urcw6pE0F7RNog3Lzx3GKRnJr3Hd15uDlIbqaDa9BbgA==}
+    engines: {node: '>=16'}
 
   '@emnapi/runtime@1.11.0':
     resolution: {integrity: sha512-55coeOFKHv1ywEcUXJtWU5f+Jr/W5tZDvZig8DLKSwUN1JpROQ4rk/SNOQiFWmaR/VKF4zuFyW1B8JduOSv6Pg==}
@@ -953,6 +963,12 @@ snapshots:
       tslib: 2.8.1
 
   '@aws/lambda-invoke-store@0.2.4': {}
+
+  '@clickhouse/client-common@1.20.0': {}
+
+  '@clickhouse/client@1.20.0':
+    dependencies:
+      '@clickhouse/client-common': 1.20.0
 
   '@emnapi/runtime@1.11.0':
     dependencies:

@@ -42,12 +42,19 @@ export async function directStoryboard(
   return board;
 }
 
-async function viaBedrock(user: string): Promise<string> {
+/** Generic completion against the same provider stack (TrueFoundry gateway if configured, else Bedrock). */
+export async function complete(system: string, user: string): Promise<string> {
+  return CONFIG.director.truefoundryApiKey
+    ? viaTrueFoundry(user, system)
+    : viaBedrock(user, system);
+}
+
+async function viaBedrock(user: string, system: string = SYSTEM): Promise<string> {
   const client = new BedrockRuntimeClient({ region: CONFIG.director.region });
   const res = await client.send(
     new ConverseCommand({
       modelId: CONFIG.director.bedrockModelId,
-      system: [{ text: SYSTEM }],
+      system: [{ text: system }],
       messages: [{ role: "user", content: [{ text: user }] }],
       inferenceConfig: { maxTokens: 2000, temperature: 0.8 },
     }),
@@ -57,7 +64,7 @@ async function viaBedrock(user: string): Promise<string> {
   return text;
 }
 
-async function viaTrueFoundry(user: string): Promise<string> {
+async function viaTrueFoundry(user: string, system: string = SYSTEM): Promise<string> {
   const res = await fetch(`${CONFIG.director.truefoundryBaseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -67,7 +74,7 @@ async function viaTrueFoundry(user: string): Promise<string> {
     body: JSON.stringify({
       model: CONFIG.director.truefoundryModel,
       messages: [
-        { role: "system", content: SYSTEM },
+        { role: "system", content: system },
         { role: "user", content: user },
       ],
       max_tokens: 2000,
