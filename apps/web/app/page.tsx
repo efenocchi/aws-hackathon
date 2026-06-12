@@ -2,6 +2,20 @@
 
 import { deliverableLibrary } from "@aas/openui-lib";
 import { Renderer } from "@openuidev/react-lang";
+import {
+  Clapperboard,
+  Palette,
+  PenLine,
+  Telescope,
+  Settings2,
+  Megaphone,
+  BarChart3,
+  Sparkles,
+  Command,
+  Star,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -38,15 +52,15 @@ interface Job {
   error?: string;
 }
 
-const CATEGORY_STYLE: Record<string, { icon: string; bg: string }> = {
-  video: { icon: "🎬", bg: "rgba(95,93,77,0.12)" },
-  design: { icon: "🎨", bg: "rgba(158,148,139,0.16)" },
-  copywriting: { icon: "✍️", bg: "rgba(136,124,113,0.14)" },
-  research: { icon: "🔭", bg: "rgba(95,93,77,0.09)" },
-  engineering: { icon: "⚙️", bg: "#F1F0EF" },
-  marketing: { icon: "📣", bg: "rgba(158,148,139,0.12)" },
-  data: { icon: "📊", bg: "rgba(136,124,113,0.1)" },
-  other: { icon: "✨", bg: "#F1F0EF" },
+const CATEGORY_STYLE: Record<string, { Icon: LucideIcon; bg: string }> = {
+  video: { Icon: Clapperboard, bg: "rgba(95,93,77,0.12)" },
+  design: { Icon: Palette, bg: "rgba(158,148,139,0.16)" },
+  copywriting: { Icon: PenLine, bg: "rgba(136,124,113,0.14)" },
+  research: { Icon: Telescope, bg: "rgba(95,93,77,0.09)" },
+  engineering: { Icon: Settings2, bg: "#F1F0EF" },
+  marketing: { Icon: Megaphone, bg: "rgba(158,148,139,0.12)" },
+  data: { Icon: BarChart3, bg: "rgba(136,124,113,0.1)" },
+  other: { Icon: Sparkles, bg: "#F1F0EF" },
 };
 
 const CATEGORIES = ["all", "video", "design", "copywriting", "research", "engineering", "marketing", "data"];
@@ -102,8 +116,8 @@ export default function Store() {
     <div className="shell">
       <header className="topbar rise">
         <div className="brand">
-          <div className="brandMark">⌘</div>
-          <span className="brandName">Agent App Store</span>
+          <div className="brandMark"><Command size={20} strokeWidth={2.25} /></div>
+          <span className="brandName">Skill Store</span>
         </div>
         <div className="topRight">
           <a className="navLink" href="/activity">Activity</a>
@@ -154,7 +168,9 @@ export default function Store() {
                 onClick={() => setSelected(s)}
               >
                 <div className="cardTop">
-                  <div className="icon" style={{ background: style.bg }}>{style.icon}</div>
+                  <div className="icon" style={{ background: style.bg }}>
+                    <style.Icon size={24} strokeWidth={1.75} />
+                  </div>
                   <div>
                     <div className="cardName">{s.name}</div>
                     <div className="owner">by {s.ownerAgent}</div>
@@ -163,7 +179,7 @@ export default function Store() {
                 <p className="desc">{s.description}</p>
                 <div className="cardFoot">
                   <div className="meta">
-                    <span className="stars">★ {s.rating.toFixed(1)}</span>
+                    <span className="stars"><Star size={13} fill="currentColor" strokeWidth={0} /> {s.rating.toFixed(1)}</span>
                     <span>{s.downloads.toLocaleString()}</span>
                     <span className={`badge ${s.type}`}>{s.type}</span>
                   </div>
@@ -249,9 +265,11 @@ function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <button className="closeX" onClick={onClose}>✕</button>
+        <button className="closeX" onClick={onClose} aria-label="Close"><X size={16} /></button>
         <div className="cardTop" style={{ marginBottom: 14 }}>
-          <div className="icon" style={{ background: style.bg }}>{style.icon}</div>
+          <div className="icon" style={{ background: style.bg }}>
+            <style.Icon size={24} strokeWidth={1.75} />
+          </div>
           <div>
             <h2>{skill.name}</h2>
             <div className="owner">

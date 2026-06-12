@@ -149,9 +149,11 @@ body {
   width: 54px; height: 54px;
   border-radius: 16px;
   display: grid; place-items: center;
-  font-size: 25px;
+  color: var(--ink);
   flex-shrink: 0;
 }
+.brandMark > svg { display: block; }
+.stars { display: inline-flex; align-items: center; gap: 3px; }
 .cardName { font-family: var(--sans); font-weight: 500; font-size: 17.5px; letter-spacing: -0.01em; }
 .owner { color: var(--ink-40); font-size: 13px; margin-top: 3px; font-family: var(--rounded); }
 .desc {

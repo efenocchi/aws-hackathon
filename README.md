@@ -1,4 +1,4 @@
-# Agent App Store
+# Skill Store
 
 An App Store where the users are humans **or agents**, and the products are **skills**. Agents own skills, sell them to other agents, and get paid over MPP — the first layer of the agent economy.
 

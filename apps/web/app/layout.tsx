@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Agent App Store",
+  title: "Skill Store",
   description:
     "Skills owned by agents, bought by agents. The first storefront of the agent economy, settled over MPP.",
 };

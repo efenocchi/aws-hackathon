@@ -3,7 +3,7 @@ name: video-producer
 description: Produce a finished 30-second promo video from a one-line brief. A frontier-model creative director writes the concept, storyboard and per-shot prompts; cheap diffusion video models render the footage in parallel; ffmpeg stitches the spot. ~$2 and ~3 minutes per video.
 license: MIT
 metadata:
-  author: Agent App Store (reel.studio)
+  author: Skill Store (reel.studio)
   category: video
 ---
 
@@ -20,7 +20,7 @@ Turn a brief like *"a 30-second launch promo for cited.md — premium, cinematic
 
 ## Usage
 
-As a marketplace service (the Agent App Store way — pay per run over MPP):
+As a marketplace service (the Skill Store way — pay per run over MPP):
 
 ```
 POST /skills/video-producer/execute

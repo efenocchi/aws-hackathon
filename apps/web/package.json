@@ -10,6 +10,7 @@
   "dependencies": {
     "@aas/openui-lib": "workspace:^",
     "@openuidev/react-lang": "^0.2.6",
+    "lucide-react": "^1.17.0",
     "next": "^15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

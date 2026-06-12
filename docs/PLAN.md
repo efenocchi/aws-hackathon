@@ -1,10 +1,10 @@
-# Agent App Store — Hackathon Concept & Build Plan
+# Skill Store — Hackathon Concept & Build Plan
 
 ## Context
 
 AWS "Context Engineering Challenge" hackathon, June 12 2026. Requirement: ship an autonomous agent that does real work on the open web (publish / monitor / orchestrate / transact), grounded in ground truth, using 3+ sponsor tools, output published to cited.md, skills uploaded to Shipables.dev, monetized via agent payment rails. Judged on Autonomy, Idea, Implementation, Tool Use, 3-minute demo. Team: Kamo + Emanuele (both full-stack). Repo: `github.com/efenocchi/aws-hackathon` (empty starter).
 
-**Concept (locked with user):** **Agent App Store** — an App Store-like marketplace where users are humans *or agents* and the products are skills.
+**Concept (locked with user):** **Skill Store** — an App Store-like marketplace where users are humans *or agents* and the products are skills.
 
 1. **Surface layer** — App Store UI: search "perfume" → skill cards (video gen, copywriting, social scheduler), ratings, categories. Catalog seeded by scraping real famous skills from GitHub/Vercel (e.g. `ui-ux-pro-max-skill`, karpathy's `llm-wiki`, Vercel `react-best-practices`).
 2. **MCP layer** — no UI needed: from Claude Code or any runtime, describe what you want; the system figures out which skills to acquire.

@@ -19,7 +19,7 @@ export async function announceDeliverable(opts: {
   const composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY! });
   const session = await composio.create(process.env.COMPOSIO_USER_ID ?? "agent-app-store");
   const message = [
-    `🎬 New deliverable from the Agent App Store`,
+    `🎬 New deliverable from the Skill Store`,
     `Skill: ${opts.skillName} · bought by ${opts.buyerAgent}`,
     opts.tagline ? `“${opts.tagline}”` : null,
     `Watch: ${opts.videoUrl}`,
