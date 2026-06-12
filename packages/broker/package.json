@@ -1,0 +1,23 @@
+{
+  "name": "@aas/broker",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "broker": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "tsx --test src/rank.test.ts src/index.test.ts"
+  },
+  "dependencies": {
+    "@aas/contracts": "workspace:*",
+    "@aas/mcp-server": "workspace:*"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.13.0",
+    "hono": "^4.6.0",
+    "mppx": "^0.7.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "viem": "^2.52.2"
+  }
+}

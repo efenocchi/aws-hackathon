@@ -5,9 +5,17 @@ services:
     plan: starter
     buildCommand: corepack enable && pnpm install
     startCommand: pnpm --filter @aas/api start
+    disk:
+      name: renders
+      mountPath: /var/data/renders
+      sizeGB: 10
     envVars:
       - key: PORT
         value: "4000"
+      - key: RENDERS_DIR
+        value: /var/data/renders
+      - key: MPP_SECRET_KEY
+        sync: false
       - key: FAL_KEY
         sync: false
       - key: SENSO_API_KEY

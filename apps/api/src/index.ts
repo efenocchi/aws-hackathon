@@ -8,6 +8,7 @@ import type {
   SkillListing,
   Transaction,
 } from "@aas/contracts";
+import { createPaymentGate, type PaymentVariables } from "@aas/payments";
 import { complete, produceVideo } from "@aas/video-producer";
 import { insertTransaction } from "./clickhouse.js";
 import { SEED_SKILLS } from "./seed.js";
@@ -16,7 +17,7 @@ const skills = new Map<string, SkillListing>(SEED_SKILLS.map((s) => [s.id, s]));
 const jobs = new Map<string, JobStatus>();
 const transactions: Transaction[] = [];
 
-const app = new Hono();
+const app = new Hono<{ Variables: PaymentVariables }>();
 app.use("*", cors());
 
 app.get("/health", (c) => c.json({ ok: true, skills: skills.size }));
@@ -41,13 +42,19 @@ app.get("/skills/:id", (c) => {
   return skill ? c.json(skill) : c.json({ error: "not found" }, 404);
 });
 
-// NOTE for Emanuele: mount the MPP paymentMiddleware on this route.
-// Until then, executions record a mock transaction so the leaderboard works.
-app.post("/skills/:id/execute", async (c) => {
+// MPP payment gate: charges skill.priceUsd in pathUSD (Tempo testnet) to the
+// owner agent's wallet. Unpaid requests get a 402 challenge and never reach
+// the handler — no job, no transaction.
+const paymentGate = createPaymentGate({ getSkill: (id) => skills.get(id) });
+
+app.post("/skills/:id/execute", paymentGate, async (c) => {
   const skill = skills.get(c.req.param("id"));
   if (!skill) return c.json({ error: "not found" }, 404);
   if (skill.type !== "service")
     return c.json({ error: "package skills are purchased, not executed" }, 400);
+
+  const payment = c.get("paymentReceipt");
+  if (!payment) return c.json({ error: "payment receipt missing" }, 500);
 
   const body = (await c.req.json()) as ExecuteRequest;
   if (!body.brief) return c.json({ error: "brief required" }, 400);
@@ -71,7 +78,7 @@ app.post("/skills/:id/execute", async (c) => {
     sellerAgent: skill.ownerAgent,
     amountUsd: skill.priceUsd,
     rail: "mpp",
-    receipt: "mock-pending-mpp-integration",
+    receipt: payment.reference,
     timestamp: now,
   });
 

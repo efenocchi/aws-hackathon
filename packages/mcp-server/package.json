@@ -1,0 +1,30 @@
+{
+  "name": "@aas/mcp-server",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./buyer": "./src/buyer.ts",
+    "./market": "./src/market.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "tsx --test src/buyer.test.ts",
+    "e2e": "tsx src/e2e-client.ts"
+  },
+  "dependencies": {
+    "@aas/contracts": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.13.0",
+    "mppx": "^0.7.0",
+    "viem": "^2.52.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.13.0",
+    "hono": "^4.6.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
