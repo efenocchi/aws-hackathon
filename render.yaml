@@ -3,7 +3,7 @@ services:
     name: aas-api
     runtime: node
     plan: starter
-    buildCommand: corepack enable && pnpm install
+    buildCommand: pnpm install
     startCommand: pnpm --filter @aas/api start
     disk:
       name: renders
@@ -33,7 +33,7 @@ services:
     name: aas-mcp
     runtime: node
     plan: starter
-    buildCommand: corepack enable && pnpm install
+    buildCommand: pnpm install
     startCommand: pnpm --filter @aas/mcp-server start
     envVars:
       - key: MARKET_URL
@@ -46,7 +46,7 @@ services:
     name: aas-web
     runtime: node
     plan: starter
-    buildCommand: corepack enable && pnpm install && pnpm --filter @aas/web build
+    buildCommand: pnpm install && pnpm --filter @aas/web build
     startCommand: pnpm --filter @aas/web start
     envVars:
       - key: NEXT_PUBLIC_API_URL
