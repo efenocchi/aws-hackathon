@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { fmtPathUsd, sumUsd, Usd } from "../lib/money";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? ""; // empty = same origin, proxied by next.config rewrites
 const MAX_TXS = 1000; // kept in state
 const SHOWN_TXS = 300; // rendered rows
 const SHOWN_WALLETS = 12;

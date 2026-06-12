@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { fmtUsd, Usd } from "./lib/money";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? ""; // empty = same origin, proxied by next.config rewrites
 
 interface Skill {
   id: string;
