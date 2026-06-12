@@ -42,12 +42,39 @@ export async function directStoryboard(
 
 /**
  * Generic completion. Provider priority: Anthropic API (sponsor, Fable 5) ->
- * TrueFoundry gateway (sponsor) -> Bedrock (local AWS creds fallback).
+ * TrueFoundry gateway (sponsor) -> Claude Code CLI (personal account, no key
+ * needed — local dev/demo) -> Bedrock (AWS creds fallback).
  */
 export async function complete(system: string, user: string): Promise<string> {
   if (process.env.ANTHROPIC_API_KEY) return viaAnthropic(user, system);
   if (CONFIG.director.truefoundryApiKey) return viaTrueFoundry(user, system);
+  if (await claudeCliAvailable()) return viaClaudeCode(user, system);
   return viaBedrock(user, system);
+}
+
+let cliAvailable: boolean | null = null;
+async function claudeCliAvailable(): Promise<boolean> {
+  if (cliAvailable !== null) return cliAvailable;
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  cliAvailable = await promisify(execFile)("claude", ["--version"])
+    .then(() => true)
+    .catch(() => false);
+  return cliAvailable;
+}
+
+/** Headless Claude Code (`claude -p`) on the user's logged-in account — no API key. */
+async function viaClaudeCode(user: string, system: string = SYSTEM): Promise<string> {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { stdout } = await promisify(execFile)(
+    "claude",
+    ["-p", user, "--append-system-prompt", system, "--max-turns", "1"],
+    { maxBuffer: 10 * 1024 * 1024, timeout: 180_000 },
+  );
+  const text = stdout.trim();
+  if (!text) throw new Error("empty Claude Code response");
+  return text;
 }
 
 async function viaAnthropic(user: string, system: string = SYSTEM): Promise<string> {
