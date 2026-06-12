@@ -46,8 +46,9 @@ export async function runwareImage(prompt: string): Promise<string> {
       taskUUID: randomUUID(),
       model: MODELS.image,
       positivePrompt: prompt,
+      // Runware imageInference requires dimensions in multiples of 64.
       width: 1280,
-      height: 720,
+      height: 704,
       numberResults: 1,
       includeCost: true,
     },
@@ -68,8 +69,10 @@ export async function runwareVideo(
       taskUUID,
       model: MODELS.video,
       positivePrompt: motionPrompt,
-      frameImages: [{ inputImage: imageUrl }],
-      duration: durationSec,
+      // Wan models take i2v input as inputs.referenceImages; frameImages is
+      // rejected. Duration must be 2-10s.
+      inputs: { referenceImages: [imageUrl] },
+      duration: Math.min(Math.max(durationSec, 2), 10),
       width: 1280,
       height: 720,
       deliveryMethod: "async",
@@ -80,7 +83,9 @@ export async function runwareVideo(
   const deadline = Date.now() + 8 * 60_000;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 3_000));
-    const items = await post([{ taskType: "getResponse", taskUUID: randomUUID(), forTaskUUID: taskUUID }]).catch(
+    // getResponse retrieves by the ORIGINAL task's UUID; a forTaskUUID field
+    // is silently ignored and polls report "processing" forever.
+    const items = await post([{ taskType: "getResponse", taskUUID }]).catch(
       () => [] as RunwareItem[],
     );
     const hit = items.find((i) => i.videoURL);
