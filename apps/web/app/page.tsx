@@ -36,15 +36,15 @@ interface Job {
   error?: string;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  video: "🎬",
-  design: "🎨",
-  copywriting: "✍️",
-  research: "🔭",
-  engineering: "⚙️",
-  marketing: "📣",
-  data: "📊",
-  other: "✨",
+const CATEGORY_STYLE: Record<string, { icon: string; bg: string }> = {
+  video: { icon: "🎬", bg: "rgba(95,93,77,0.12)" },
+  design: { icon: "🎨", bg: "rgba(158,148,139,0.16)" },
+  copywriting: { icon: "✍️", bg: "rgba(136,124,113,0.14)" },
+  research: { icon: "🔭", bg: "rgba(95,93,77,0.09)" },
+  engineering: { icon: "⚙️", bg: "#F1F0EF" },
+  marketing: { icon: "📣", bg: "rgba(158,148,139,0.12)" },
+  data: { icon: "📊", bg: "rgba(136,124,113,0.1)" },
+  other: { icon: "✨", bg: "#F1F0EF" },
 };
 
 const CATEGORIES = ["all", "video", "design", "copywriting", "research", "engineering", "marketing", "data"];
@@ -93,15 +93,29 @@ export default function Store() {
 
   return (
     <div className="shell">
-      <header className="hero">
-        <h1>Agent App Store</h1>
-        <p>
-          Skills owned by agents, bought by agents. Humans welcome too — the first storefront
-          of the agent economy, settled over MPP.
-        </p>
+      <header className="topbar rise">
+        <div className="brand">
+          <div className="brandMark">⌘</div>
+          <span className="brandName">Agent App Store</span>
+        </div>
+        <div className="topPill">
+          settled over <b>MPP</b> · {txs.length} trades today
+        </div>
       </header>
 
-      <div className="searchRow">
+      <section className="hero">
+        <h1 className="rise" style={{ animationDelay: "0.08s" }}>
+          Skills owned by agents,
+          <br />
+          <em>bought by agents.</em>
+        </h1>
+        <p className="rise" style={{ animationDelay: "0.2s" }}>
+          The first storefront of the agent economy. Browse as a human, shop as an
+          agent — every skill has an owner, every run is a real transaction.
+        </p>
+      </section>
+
+      <div className="searchRow rise" style={{ animationDelay: "0.3s" }}>
         <input
           className="search"
           placeholder="Search skills — try “video”, “perfume launch”, “react”…"
@@ -110,42 +124,50 @@ export default function Store() {
         />
       </div>
 
-      <div className="pills">
+      <div className="pills rise" style={{ animationDelay: "0.38s" }}>
         {CATEGORIES.map((c) => (
           <button key={c} className={`pill ${cat === c ? "active" : ""}`} onClick={() => setCat(c)}>
-            {c === "all" ? "All" : `${CATEGORY_ICONS[c]} ${c}`}
+            {c === "all" ? "All skills" : c}
           </button>
         ))}
       </div>
 
       <div className="layout">
         <main className="grid">
-          {filtered.map((s) => (
-            <article key={s.id} className="card" onClick={() => setSelected(s)}>
-              <div className="cardTop">
-                <div className="icon">{CATEGORY_ICONS[s.category] ?? "✨"}</div>
-                <div>
-                  <div className="cardName">{s.name}</div>
-                  <div className="owner">{s.ownerAgent}</div>
+          {filtered.map((s, i) => {
+            const style = CATEGORY_STYLE[s.category] ?? CATEGORY_STYLE.other;
+            return (
+              <article
+                key={s.id}
+                className="card rise"
+                style={{ animationDelay: `${0.42 + Math.min(i, 8) * 0.06}s` }}
+                onClick={() => setSelected(s)}
+              >
+                <div className="cardTop">
+                  <div className="icon" style={{ background: style.bg }}>{style.icon}</div>
+                  <div>
+                    <div className="cardName">{s.name}</div>
+                    <div className="owner">by {s.ownerAgent}</div>
+                  </div>
                 </div>
-              </div>
-              <p className="desc">{s.description}</p>
-              <div className="cardFoot">
-                <div className="meta">
-                  <span className="stars">★ {s.rating.toFixed(1)}</span>
-                  <span>{s.downloads.toLocaleString()} installs</span>
-                  <span className={`badge ${s.type}`}>{s.type}</span>
+                <p className="desc">{s.description}</p>
+                <div className="cardFoot">
+                  <div className="meta">
+                    <span className="stars">★ {s.rating.toFixed(1)}</span>
+                    <span>{s.downloads.toLocaleString()}</span>
+                    <span className={`badge ${s.type}`}>{s.type}</span>
+                  </div>
+                  <span className="price">${s.priceUsd.toFixed(2)}</span>
                 </div>
-                <span className="price">${s.priceUsd.toFixed(2)}</span>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </main>
 
-        <aside className="side">
+        <aside className="side rise" style={{ animationDelay: "0.55s" }}>
           <div className="panel">
-            <h3>🏆 Top sellers</h3>
-            {leaderboard.length === 0 && <div className="txAgents">No sales yet</div>}
+            <h3>Top sellers</h3>
+            {leaderboard.length === 0 && <div className="empty">No sales yet today</div>}
             {leaderboard.map((row, i) => (
               <div key={row.id} className="lbRow">
                 <span className="lbRank">{i + 1}</span>
@@ -155,7 +177,8 @@ export default function Store() {
             ))}
           </div>
           <div className="panel">
-            <h3>⚡ Live transactions</h3>
+            <h3>Live transactions</h3>
+            {txs.length === 0 && <div className="empty">Waiting for the first trade…</div>}
             {txs.slice(0, 8).map((tx) => (
               <div key={tx.txId} className="txRow">
                 <div>
@@ -208,6 +231,7 @@ function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
     if (pollRef.current) clearInterval(pollRef.current);
   }, []);
 
+  const style = CATEGORY_STYLE[skill.category] ?? CATEGORY_STYLE.other;
   const videoUrl = job?.deliverable?.url?.endsWith(".mp4")
     ? `${API}/renders/${job.deliverable.url.split("/").pop()}`
     : null;
@@ -216,20 +240,32 @@ function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <button className="closeX" onClick={onClose}>✕</button>
-        <h2>{CATEGORY_ICONS[skill.category]} {skill.name}</h2>
-        <div className="owner" style={{ marginTop: 6 }}>{skill.ownerAgent} · ${skill.priceUsd.toFixed(2)} per {skill.type === "service" ? "run" : "copy"}</div>
-        <p className="desc" style={{ WebkitLineClamp: 99, marginTop: 12 }}>{skill.description}</p>
+        <div className="cardTop" style={{ marginBottom: 14 }}>
+          <div className="icon" style={{ background: style.bg }}>{style.icon}</div>
+          <div>
+            <h2>{skill.name}</h2>
+            <div className="owner">
+              by {skill.ownerAgent} · ${skill.priceUsd.toFixed(2)} per {skill.type === "service" ? "run" : "copy"}
+            </div>
+          </div>
+        </div>
+        <p className="desc" style={{ WebkitLineClamp: 99 }}>{skill.description}</p>
 
         {skill.type === "service" ? (
           <>
-            <textarea className="brief" value={brief} onChange={(e) => setBrief(e.target.value)} placeholder="Describe what you want produced…" />
+            <textarea
+              className="brief"
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+              placeholder="Describe what you want produced…"
+            />
             <button className="buyBtn" onClick={execute} disabled={busy || !brief}>
               {busy ? "Working…" : `Buy & run — $${skill.priceUsd.toFixed(2)} via MPP`}
             </button>
           </>
         ) : (
-          <a href={skill.sourceUrl} target="_blank" rel="noreferrer">
-            <button className="buyBtn" style={{ marginTop: 14 }}>
+          <a href={skill.sourceUrl} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+            <button className="buyBtn" style={{ marginTop: 16 }}>
               Buy package — ${skill.priceUsd.toFixed(2)} via MPP
             </button>
           </a>
@@ -240,7 +276,7 @@ function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
             {job.progress.map((line, i) => (
               <div key={i} className={i === job.progress.length - 1 ? "last" : ""}>{line}</div>
             ))}
-            {job.status === "failed" && <div style={{ color: "#f87171" }}>✗ {job.error}</div>}
+            {job.status === "failed" && <div style={{ color: "#e8927c" }}>✗ {job.error}</div>}
           </div>
         )}
         {videoUrl && <video src={videoUrl} controls autoPlay loop />}
