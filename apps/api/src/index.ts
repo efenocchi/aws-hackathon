@@ -104,6 +104,28 @@ app.post("/skills/:id/execute", paymentGate, async (c) => {
   return c.json({ jobId });
 });
 
+// Server-side buy: a "house buyer" agent pays the MPP gate on the caller's
+// behalf (storefront click / demo), so the UI gets real on-chain receipts
+// without holding a wallet in the browser. The broker/MCP path is the
+// agent-to-agent equivalent.
+app.post("/skills/:id/buy", async (c) => {
+  const skill = skills.get(c.req.param("id"));
+  if (!skill) return c.json({ error: "not found" }, 404);
+  const body = await c.req.json().catch(() => ({}));
+  try {
+    const { createBuyerWallet } = await import("@aas/payments");
+    const buyer = await createBuyerWallet("storefront-buyer");
+    const res = await buyer.fetch(`http://localhost:${port}/skills/${skill.id}/execute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, buyerAgent: body.buyerAgent ?? buyer.address }),
+    });
+    return c.json(await res.json(), res.status as 200);
+  } catch (err) {
+    return c.json({ error: `buy failed: ${String((err as Error).message)}` }, 500);
+  }
+});
+
 app.get("/jobs/:id", (c) => {
   const job = jobs.get(c.req.param("id"));
   return job ? c.json(job) : c.json({ error: "not found" }, 404);

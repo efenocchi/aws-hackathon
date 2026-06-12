@@ -32,21 +32,30 @@ export interface PublishResult {
   response: unknown;
 }
 
+let citeablesPublisherId: string | null = null;
+async function getCiteablesPublisher(): Promise<string> {
+  if (citeablesPublisherId) return citeablesPublisherId;
+  const { destinations } = await senso<{
+    destinations: Array<{ publisher_id: string; slug: string }>;
+  }>("/org/destinations");
+  const dest = destinations.find((d) => d.slug === "citeables") ?? destinations[0];
+  if (!dest) throw new Error("no citeables destination");
+  citeablesPublisherId = dest.publisher_id;
+  return citeablesPublisherId;
+}
+
 /**
- * Publishes a deliverable announcement to cited.md.
- * The exact prompts-create schema is thinly documented; if the shape below 400s,
- * check `senso prompts create --help` with the live CLI and adjust.
+ * Publishes a deliverable to cited.md (citeables). Verified against the live
+ * Senso Org API 2026-06-12: create a prompt -> publish markdown against it.
  */
 export async function publishToCited(input: PublishInput): Promise<PublishResult> {
-  const prompt = await senso<{ id?: string; question_id?: string }>(
-    "/org/prompts",
-    {
-      method: "POST",
-      body: JSON.stringify({ text: input.title }),
-    },
-  );
-  const questionId = prompt.id ?? prompt.question_id;
-  if (!questionId) throw new Error(`no question id in prompt response: ${JSON.stringify(prompt)}`);
+  const publisherId = await getCiteablesPublisher();
+  const prompt = await senso<{ prompt_id: string }>("/org/prompts", {
+    method: "POST",
+    body: JSON.stringify({ question_text: input.title, type: "awareness" }),
+  });
+  const questionId = prompt.prompt_id;
+  if (!questionId) throw new Error(`no prompt_id in response: ${JSON.stringify(prompt)}`);
 
   const response = await senso("/org/content-engine/publish", {
     method: "POST",
@@ -55,6 +64,7 @@ export async function publishToCited(input: PublishInput): Promise<PublishResult
       raw_markdown: input.markdown,
       seo_title: input.title,
       summary: input.summary,
+      publisher_ids: [publisherId],
       mark_as_published: true,
     }),
   });
