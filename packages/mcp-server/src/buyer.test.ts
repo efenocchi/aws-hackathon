@@ -34,8 +34,10 @@ test("buyer fetch settles a real MPP 402 challenge", { timeout: 120_000 }, async
   const server = serve({ fetch: app.fetch, port: 4599 });
 
   try {
+    const dataDir = mkdtempSync(join(tmpdir(), "aas-buyer-"));
+    process.env.AAS_DATA_DIR = dataDir;
     const buyer = await createBuyer({
-      walletFile: join(mkdtempSync(join(tmpdir(), "aas-buyer-")), "wallet.json"),
+      walletFile: join(dataDir, "wallet.json"),
       agentPrefix: "test",
     });
     assert.notEqual(await buyer.balance(), "0", "faucet funded the new wallet");

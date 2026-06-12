@@ -53,11 +53,13 @@ function loadOrCreateWallet(file: string): {
   privateKey: `0x${string}`;
   created: boolean;
 } {
-  const dataRoot = join(repoRoot(), ".data");
+  const dataRoot = process.env.AAS_DATA_DIR
+    ? resolve(process.env.AAS_DATA_DIR)
+    : join(repoRoot(), ".data");
   const resolved = resolve(file);
   if (!resolved.startsWith(dataRoot + sep))
     throw new Error(
-      `wallet file must live under ${dataRoot} (got ${resolved}) — refusing to put key material elsewhere`,
+      `wallet file must live under ${dataRoot} (got ${resolved}) — refusing to put key material elsewhere; set AAS_DATA_DIR to relocate the data root explicitly`,
     );
   if (existsSync(file)) {
     chmodSync(file, 0o600);
