@@ -7,14 +7,26 @@ import { directStoryboard } from "./director.js";
 import { falRun, type FalImageResult, type FalVideoResult } from "./fal.js";
 import { runwareImage, runwareVideo } from "./runware.js";
 
-/** Render provider: fal (default) or runware — whichever has a key, or VIDEO_PROVIDER override. */
-function renderProvider(): "fal" | "runware" {
-  const forced = process.env.VIDEO_PROVIDER as "fal" | "runware" | undefined;
+/**
+ * Render provider: fal / runware — whichever has a key — or "mock" (zero-spend
+ * rehearsal: placeholder keyframes + the local test clip). VIDEO_PROVIDER forces.
+ * NOTE: while spend is gated, mock is the default even when keys exist.
+ */
+function renderProvider(): "fal" | "runware" | "mock" {
+  const forced = process.env.VIDEO_PROVIDER as "fal" | "runware" | "mock" | undefined;
   if (forced) return forced;
-  if (process.env.FAL_KEY) return "fal";
-  if (process.env.RUNWARE_API_KEY) return "runware";
-  return "fal";
+  if (process.env.RENDER_SPEND_APPROVED === "1") {
+    if (process.env.FAL_KEY) return "fal";
+    if (process.env.RUNWARE_API_KEY) return "runware";
+  }
+  return "mock";
 }
+
+/** Zero-spend stand-ins so the full demo loop can be rehearsed. */
+const MOCK = {
+  keyframe: (i: number) => `https://picsum.photos/seed/aas-shot-${i}/1280/720`,
+  clip: () => new URL("../../../renders/test-promo.mp4", import.meta.url).pathname,
+};
 
 const execFileP = promisify(execFile);
 
@@ -50,14 +62,16 @@ export async function produceVideo(
 
   onProgress(`🖼️ Rendering ${board.shots.length} keyframes (${provider})...`);
   const keyframes = await Promise.all(
-    board.shots.map((shot) =>
-      provider === "runware"
-        ? runwareImage(shot.imagePrompt)
-        : falRun<FalImageResult>(CONFIG.fal.imageModel, {
-            prompt: shot.imagePrompt,
-            image_size: "landscape_16_9",
-            num_images: 1,
-          }).then((r) => r.images[0].url),
+    board.shots.map((shot, i) =>
+      provider === "mock"
+        ? Promise.resolve(MOCK.keyframe(i))
+        : provider === "runware"
+          ? runwareImage(shot.imagePrompt)
+          : falRun<FalImageResult>(CONFIG.fal.imageModel, {
+              prompt: shot.imagePrompt,
+              image_size: "landscape_16_9",
+              num_images: 1,
+            }).then((r) => r.images[0].url),
     ),
   );
   onProgress(`🖼️ Keyframes done in ${sec(t0)}s`);
@@ -65,14 +79,16 @@ export async function produceVideo(
   onProgress(`🎥 Animating ${board.shots.length} shots in parallel (${provider})...`);
   const clips = await Promise.all(
     board.shots.map((shot, i) =>
-      (provider === "runware"
-        ? runwareVideo(keyframes[i], shot.motionPrompt, CONFIG.shots.secondsPerShot)
-        : falRun<FalVideoResult>(videoModel, {
-            image_url: keyframes[i],
-            prompt: shot.motionPrompt,
-            duration: CONFIG.shots.secondsPerShot,
-            resolution: CONFIG.shots.resolution,
-          }).then((r) => r.video.url)
+      (provider === "mock"
+        ? new Promise<string>((r) => setTimeout(() => r(MOCK.clip()), 1500 + i * 700))
+        : provider === "runware"
+          ? runwareVideo(keyframes[i], shot.motionPrompt, CONFIG.shots.secondsPerShot)
+          : falRun<FalVideoResult>(videoModel, {
+              image_url: keyframes[i],
+              prompt: shot.motionPrompt,
+              duration: CONFIG.shots.secondsPerShot,
+              resolution: CONFIG.shots.resolution,
+            }).then((r) => r.video.url)
       ).then((url) => {
         onProgress(`  ✓ shot ${i + 1}/${board.shots.length}: ${shot.title}`);
         return url;
@@ -101,6 +117,10 @@ async function stitch(clipUrls: string[]): Promise<string> {
   const id = Date.now().toString(36);
   const localClips: string[] = [];
   for (let i = 0; i < clipUrls.length; i++) {
+    if (clipUrls[i].startsWith("/")) {
+      localClips.push(clipUrls[i]); // already on disk (mock provider)
+      continue;
+    }
     const p = join(CONFIG.outDir, `${id}-clip${i}.mp4`);
     const res = await fetch(clipUrls[i]);
     await writeFile(p, Buffer.from(await res.arrayBuffer()));
