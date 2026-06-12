@@ -41,14 +41,19 @@ export async function directStoryboard(
 }
 
 /**
- * Generic completion. Provider priority: Anthropic API (sponsor, Fable 5) ->
- * TrueFoundry gateway (sponsor) -> Claude Code CLI (personal account, no key
- * needed — local dev/demo) -> Bedrock (AWS creds fallback).
+ * Generic completion. FREE-FIRST priority: Claude Code CLI (user's subscription,
+ * zero key spend) -> Anthropic API -> TrueFoundry -> Bedrock. Force a specific
+ * provider with DIRECTOR_PROVIDER=claude-code|anthropic|truefoundry|bedrock.
  */
 export async function complete(system: string, user: string): Promise<string> {
+  const forced = process.env.DIRECTOR_PROVIDER;
+  if (forced === "anthropic") return viaAnthropic(user, system);
+  if (forced === "truefoundry") return viaTrueFoundry(user, system);
+  if (forced === "bedrock") return viaBedrock(user, system);
+  if (forced === "claude-code") return viaClaudeCode(user, system);
+  if (await claudeCliAvailable()) return viaClaudeCode(user, system);
   if (process.env.ANTHROPIC_API_KEY) return viaAnthropic(user, system);
   if (CONFIG.director.truefoundryApiKey) return viaTrueFoundry(user, system);
-  if (await claudeCliAvailable()) return viaClaudeCode(user, system);
   return viaBedrock(user, system);
 }
 
