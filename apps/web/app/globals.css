@@ -206,7 +206,12 @@ body {
 .txRow { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
 .txRow:last-child { border-bottom: none; }
 .txAgents { color: var(--ink-40); font-size: 11.5px; margin-top: 2px; }
-.txAmount { color: var(--olive); font-weight: 700; white-space: nowrap; font-family: var(--rounded); }
+.txAmount { color: var(--olive); font-weight: 700; white-space: nowrap; font-family: var(--rounded); font-variant-numeric: tabular-nums; }
+
+/* Money typography — every amount renders through the <Usd> component */
+.money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.moneySym { font-size: 0.8em; font-weight: 600; opacity: 0.55; margin-right: 1px; }
+.moneyCents { font-size: 0.8em; font-weight: 600; opacity: 0.55; }
 .lbRow { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 14px; }
 .lbRank {
   width: 26px; height: 26px;
@@ -218,7 +223,7 @@ body {
   flex-shrink: 0;
 }
 .lbRow:first-child .lbRank { background: var(--ink); color: #fff; }
-.lbSales { margin-left: auto; color: var(--ink); font-weight: 700; font-family: var(--rounded); }
+.lbSales { margin-left: auto; color: var(--ink); font-weight: 700; font-family: var(--rounded); font-variant-numeric: tabular-nums; }
 
 /* Activity */
 .sectionLabel {
@@ -243,7 +248,7 @@ body {
   font-size: 12.5px;
   color: var(--ink-40);
 }
-.walletBal { font-size: 22px; font-weight: 600; color: var(--olive); font-family: var(--rounded); }
+.walletBal { font-size: 22px; font-weight: 600; color: var(--olive); font-family: var(--rounded); font-variant-numeric: tabular-nums; }
 .walletBal span { font-size: 12px; color: var(--ink-40); font-weight: 600; }
 .txTable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .txTable th {
@@ -258,6 +263,14 @@ body {
 }
 .txTable td { padding: 11px 14px 11px 0; border-bottom: 1px solid var(--line); }
 .txTable tr:last-child td { border-bottom: none; }
+.txTable th.thRight, .txTable td.txAmount { text-align: right; }
+
+/* Fresh trade: brief green settle flash that fades out */
+@keyframes settleFlash {
+  from { background: rgba(52, 199, 89, 0.16); }
+  to { background: transparent; }
+}
+.txTable tr.txFresh td { animation: settleFlash 2.2s ease-out forwards; }
 .txTime { color: var(--ink-40); white-space: nowrap; font-family: "SF Mono", ui-monospace, monospace; font-size: 12px; }
 .txReceipt { font-family: "SF Mono", ui-monospace, monospace; font-size: 12px; color: var(--warm-deep); }
 

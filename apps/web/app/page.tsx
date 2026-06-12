@@ -1,38 +1,13 @@
 "use client";
 
-import { deliverableLibrary } from "@aas/openui-lib";
-import { Renderer } from "@openuidev/react-lang";
-import {
-  Clapperboard,
-  Palette,
-  PenLine,
-  Telescope,
-  Settings2,
-  Megaphone,
-  BarChart3,
-  Sparkles,
-  Command,
-  Star,
-  X,
-  type LucideIcon,
-} from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { fmtPathUsd, sumUsd, Usd } from "../lib/money";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-
-interface Skill {
-  id: string;
-  name: string;
-  ownerAgent: string;
-  type: "service" | "package";
-  priceUsd: number;
-  description: string;
-  category: string;
-  rating: number;
-  downloads: number;
-  tags: string[];
-  sourceUrl?: string;
-}
+const MAX_TXS = 1000; // kept in state
+const SHOWN_TXS = 300; // rendered rows
+const SHOWN_WALLETS = 12;
 
 interface Tx {
   txId: string;
@@ -41,283 +16,197 @@ interface Tx {
   sellerAgent: string;
   amountUsd: number;
   rail: string;
+  receipt: string;
   timestamp: string;
 }
 
-interface Job {
-  jobId: string;
-  status: "queued" | "running" | "succeeded" | "failed";
-  progress: string[];
-  deliverable?: { url: string; extras?: Record<string, string> };
-  error?: string;
+interface Wallet {
+  agent: string;
+  address: string;
+  balancePathUsd: string;
 }
 
-const CATEGORY_STYLE: Record<string, { Icon: LucideIcon; bg: string }> = {
-  video: { Icon: Clapperboard, bg: "rgba(95,93,77,0.12)" },
-  design: { Icon: Palette, bg: "rgba(158,148,139,0.16)" },
-  copywriting: { Icon: PenLine, bg: "rgba(136,124,113,0.14)" },
-  research: { Icon: Telescope, bg: "rgba(95,93,77,0.09)" },
-  engineering: { Icon: Settings2, bg: "#F1F0EF" },
-  marketing: { Icon: Megaphone, bg: "rgba(158,148,139,0.12)" },
-  data: { Icon: BarChart3, bg: "rgba(136,124,113,0.1)" },
-  other: { Icon: Sparkles, bg: "#F1F0EF" },
-};
-
-const CATEGORIES = ["all", "video", "design", "copywriting", "research", "engineering", "marketing", "data"];
-
-/** Local mp4 paths in agent-emitted OpenUI point at the API host. */
-function rewriteRenderUrls(openui: string): string {
-  return openui.replaceAll("/renders/", `${API}/renders/`);
+interface Skill {
+  id: string;
+  name: string;
 }
 
-export default function Store() {
-  const [skills, setSkills] = useState<Skill[]>([]);
+const shortHash = (h: string) => (h.length > 18 ? `${h.slice(0, 10)}..${h.slice(-6)}` : h);
+
+/** Dedup by txId, newest first, capped — poll reconciliation and SSE both land here. */
+function mergeTxs(prev: Tx[], incoming: Tx[]): Tx[] {
+  const byId = new Map(prev.map((t) => [t.txId, t]));
+  for (const tx of incoming) byId.set(tx.txId, tx);
+  return [...byId.values()]
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+    .slice(0, MAX_TXS);
+}
+
+export default function Activity() {
   const [txs, setTxs] = useState<Tx[]>([]);
-  const [q, setQ] = useState("");
-  const [cat, setCat] = useState("all");
-  const [selected, setSelected] = useState<Skill | null>(null);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [live, setLive] = useState(false);
+  // Re-render once a second so the trades/min window slides even without events.
+  const [, setTick] = useState(0);
+  const latestTxId = useRef<string | null>(null);
 
   useEffect(() => {
+    fetch(`${API}/skills`).then((r) => r.json()).then(setSkills).catch(() => {});
     const load = () => {
-      fetch(`${API}/skills`).then((r) => r.json()).then(setSkills).catch(() => {});
-      fetch(`${API}/transactions`).then((r) => r.json()).then(setTxs).catch(() => {});
+      fetch(`${API}/transactions?limit=${MAX_TXS}`)
+        .then((r) => r.json())
+        .then((list: Tx[]) => setTxs((prev) => mergeTxs(prev, list)))
+        .catch(() => {});
+      fetch(`${API}/wallets`).then((r) => r.json()).then(setWallets).catch(() => {});
     };
     load();
-    const t = setInterval(load, 4000);
+    const t = setInterval(load, 10000);
     return () => clearInterval(t);
   }, []);
 
-  const filtered = useMemo(
-    () =>
-      skills.filter(
-        (s) =>
-          (cat === "all" || s.category === cat) &&
-          (!q ||
-            s.name.toLowerCase().includes(q.toLowerCase()) ||
-            s.description.toLowerCase().includes(q.toLowerCase()) ||
-            s.tags.some((t) => t.includes(q.toLowerCase()))),
-      ),
-    [skills, q, cat],
-  );
+  // Live SSE feed: every settled trade lands instantly; polling above reconciles.
+  useEffect(() => {
+    const es = new EventSource(`${API}/events`);
+    es.addEventListener("tx", (e) => {
+      const tx = JSON.parse((e as MessageEvent).data) as Tx;
+      latestTxId.current = tx.txId;
+      setTxs((prev) => mergeTxs(prev, [tx]));
+    });
+    es.onopen = () => setLive(true);
+    es.onerror = () => setLive(false); // EventSource auto-reconnects
+    return () => es.close();
+  }, []);
 
-  const leaderboard = useMemo(() => {
-    const sales = new Map<string, { n: number; usd: number }>();
-    for (const tx of txs) {
-      const cur = sales.get(tx.skillId) ?? { n: 0, usd: 0 };
-      sales.set(tx.skillId, { n: cur.n + 1, usd: cur.usd + tx.amountUsd });
-    }
-    return [...sales.entries()]
-      .map(([id, v]) => ({ id, ...v, name: skills.find((s) => s.id === id)?.name ?? id }))
-      .sort((a, b) => b.usd - a.usd)
-      .slice(0, 5);
-  }, [txs, skills]);
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const skillName = useMemo(() => {
+    const m = new Map(skills.map((s) => [s.id, s.name]));
+    return (id: string) => m.get(id) ?? id;
+  }, [skills]);
+
+  const stats = useMemo(() => {
+    const volume = sumUsd(txs.map((t) => t.amountUsd));
+    const buyers = new Set(txs.map((t) => t.buyerAgent)).size;
+    const cutoff = Date.now() - 60_000;
+    const lastMinute = txs.filter((t) => new Date(t.timestamp).getTime() >= cutoff).length;
+    return { trades: txs.length, volume, buyers, lastMinute };
+  }, [txs]);
 
   return (
     <div className="shell">
       <header className="topbar rise">
-        <div className="brand">
-          <div className="brandMark"><Command size={20} strokeWidth={2.25} /></div>
-          <span className="brandName">Skill Store</span>
-        </div>
+        <a className="brand" href="/" style={{ textDecoration: "none", color: "inherit" }}>
+          <div className="brandMark">⌘</div>
+          <span className="brandName">Agent App Store</span>
+        </a>
         <div className="topRight">
-          <a className="navLink" href="/activity">Activity</a>
+          <a className="navLink" href="/">Store</a>
           <div className="topPill">
-            settled over <b>MPP</b> · {txs.length} trades today
+            <span
+              style={{
+                display: "inline-block",
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                marginRight: 7,
+                background: live ? "#34c759" : "#d0d0d0",
+                transition: "background 0.3s",
+              }}
+            />
+            {live ? "live" : "connecting"} · settled over <b>MPP</b>
           </div>
         </div>
       </header>
 
-      <section className="hero">
-        <h1 className="rise" style={{ animationDelay: "0.08s" }}>
-          Skills owned by agents,
-          <br />
-          <em>bought by agents.</em>
+      <section className="hero" style={{ padding: "56px 0 16px" }}>
+        <h1 className="rise" style={{ animationDelay: "0.08s", fontSize: "clamp(34px, 4.4vw, 48px)" }}>
+          Every trade, <em>on the record.</em>
         </h1>
         <p className="rise" style={{ animationDelay: "0.2s" }}>
-          The first storefront of the agent economy. Browse as a human, shop as an
-          agent — every skill has an owner, every run is a real transaction.
+          Live custodial wallets and agent-to-agent transactions, settled in
+          pathUSD on Tempo testnet.
         </p>
       </section>
 
-      <div className="searchRow rise" style={{ animationDelay: "0.3s" }}>
-        <input
-          className="search"
-          placeholder="Search skills — try “video”, “perfume launch”, “react”…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </div>
-
-      <div className="pills rise" style={{ animationDelay: "0.38s" }}>
-        {CATEGORIES.map((c) => (
-          <button key={c} className={`pill ${cat === c ? "active" : ""}`} onClick={() => setCat(c)}>
-            {c === "all" ? "All skills" : c}
-          </button>
-        ))}
-      </div>
-
-      <div className="layout">
-        <main className="grid">
-          {filtered.map((s, i) => {
-            const style = CATEGORY_STYLE[s.category] ?? CATEGORY_STYLE.other;
-            return (
-              <article
-                key={s.id}
-                className="card rise"
-                style={{ animationDelay: `${0.42 + Math.min(i, 8) * 0.06}s` }}
-                onClick={() => setSelected(s)}
-              >
-                <div className="cardTop">
-                  <div className="icon" style={{ background: style.bg }}>
-                    <style.Icon size={24} strokeWidth={1.75} />
-                  </div>
-                  <div>
-                    <div className="cardName">{s.name}</div>
-                    <div className="owner">by {s.ownerAgent}</div>
-                  </div>
-                </div>
-                <p className="desc">{s.description}</p>
-                <div className="cardFoot">
-                  <div className="meta">
-                    <span className="stars"><Star size={13} fill="currentColor" strokeWidth={0} /> {s.rating.toFixed(1)}</span>
-                    <span>{s.downloads.toLocaleString()}</span>
-                    <span className={`badge ${s.type}`}>{s.type}</span>
-                  </div>
-                  <span className="price">${s.priceUsd.toFixed(2)}</span>
-                </div>
-              </article>
-            );
-          })}
-        </main>
-
-        <aside className="side rise" style={{ animationDelay: "0.55s" }}>
-          <div className="panel">
-            <h3>Top sellers</h3>
-            {leaderboard.length === 0 && <div className="empty">No sales yet today</div>}
-            {leaderboard.map((row, i) => (
-              <div key={row.id} className="lbRow">
-                <span className="lbRank">{i + 1}</span>
-                <span>{row.name}</span>
-                <span className="lbSales">${row.usd.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-          <div className="panel">
-            <h3>Live transactions</h3>
-            {txs.length === 0 && <div className="empty">Waiting for the first trade…</div>}
-            {txs.slice(0, 8).map((tx) => (
-              <div key={tx.txId} className="txRow">
-                <div>
-                  <div>{skills.find((s) => s.id === tx.skillId)?.name ?? tx.skillId}</div>
-                  <div className="txAgents">
-                    {tx.buyerAgent} → {tx.sellerAgent} · {tx.rail.toUpperCase()}
-                  </div>
-                </div>
-                <span className="txAmount">${tx.amountUsd.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-        </aside>
-      </div>
-
-      {selected && <SkillModal skill={selected} onClose={() => setSelected(null)} />}
-    </div>
-  );
-}
-
-function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
-  const [brief, setBrief] = useState(
-    skill.id === "video-producer"
-      ? "A 30-second launch promo for cited.md — the publishing endpoint of the agentic web. Premium, cinematic, optimistic."
-      : "",
-  );
-  const [job, setJob] = useState<Job | null>(null);
-  const [busy, setBusy] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const execute = useCallback(async () => {
-    setBusy(true);
-    const res = await fetch(`${API}/skills/${skill.id}/execute`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ brief, buyerAgent: "human.via.storefront" }),
-    });
-    const { jobId } = await res.json();
-    pollRef.current = setInterval(async () => {
-      const j: Job = await fetch(`${API}/jobs/${jobId}`).then((r) => r.json());
-      setJob(j);
-      if (j.status === "succeeded" || j.status === "failed") {
-        if (pollRef.current) clearInterval(pollRef.current);
-        setBusy(false);
-      }
-    }, 1500);
-  }, [brief, skill.id]);
-
-  useEffect(() => () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-  }, []);
-
-  const style = CATEGORY_STYLE[skill.category] ?? CATEGORY_STYLE.other;
-  const videoUrl = job?.deliverable?.url?.endsWith(".mp4")
-    ? `${API}/renders/${job.deliverable.url.split("/").pop()}`
-    : null;
-
-  return (
-    <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <button className="closeX" onClick={onClose} aria-label="Close"><X size={16} /></button>
-        <div className="cardTop" style={{ marginBottom: 14 }}>
-          <div className="icon" style={{ background: style.bg }}>
-            <style.Icon size={24} strokeWidth={1.75} />
-          </div>
-          <div>
-            <h2>{skill.name}</h2>
-            <div className="owner">
-              by {skill.ownerAgent} · ${skill.priceUsd.toFixed(2)} per {skill.type === "service" ? "run" : "copy"}
-            </div>
+      <h3 className="sectionLabel rise" style={{ animationDelay: "0.24s" }}>Market pulse</h3>
+      <div className="walletGrid rise" style={{ animationDelay: "0.28s" }}>
+        <div className="walletCard">
+          <div className="cardName">Trades</div>
+          <div className="walletBal">{stats.trades}{stats.trades >= MAX_TXS ? "+" : ""}</div>
+        </div>
+        <div className="walletCard">
+          <div className="cardName">Volume</div>
+          <div className="walletBal">
+            <Usd amount={stats.volume} /> <span>pathUSD</span>
           </div>
         </div>
-        <p className="desc" style={{ WebkitLineClamp: 99 }}>{skill.description}</p>
+        <div className="walletCard">
+          <div className="cardName">Buyer agents</div>
+          <div className="walletBal">{stats.buyers}</div>
+        </div>
+        <div className="walletCard">
+          <div className="cardName">Trades / min</div>
+          <div className="walletBal">{stats.lastMinute}</div>
+        </div>
+      </div>
 
-        {skill.type === "service" ? (
-          <>
-            <textarea
-              className="brief"
-              value={brief}
-              onChange={(e) => setBrief(e.target.value)}
-              placeholder="Describe what you want produced…"
-            />
-            <button className="buyBtn" onClick={execute} disabled={busy || !brief}>
-              {busy ? "Working…" : `Buy & run — $${skill.priceUsd.toFixed(2)} via MPP`}
-            </button>
-          </>
-        ) : (
-          <a href={skill.sourceUrl} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
-            <button className="buyBtn" style={{ marginTop: 16 }}>
-              Buy package — ${skill.priceUsd.toFixed(2)} via MPP
-            </button>
-          </a>
-        )}
-
-        {job && (
-          <div className="progress">
-            {job.progress.map((line, i) => (
-              <div key={i} className={i === job.progress.length - 1 ? "last" : ""}>{line}</div>
-            ))}
-            {job.status === "failed" && <div style={{ color: "#e8927c" }}>✗ {job.error}</div>}
+      <h3 className="sectionLabel rise" style={{ animationDelay: "0.34s" }}>Agent wallets</h3>
+      <div className="walletGrid rise" style={{ animationDelay: "0.38s" }}>
+        {wallets.length === 0 && <div className="empty">Loading wallets…</div>}
+        {wallets.slice(0, SHOWN_WALLETS).map((w) => (
+          <div key={w.address} className="walletCard">
+            <div className="cardName">{w.agent}</div>
+            <div className="walletAddr" title={w.address}>{shortHash(w.address)}</div>
+            <div className="walletBal" title={`${w.balancePathUsd} pathUSD`}>
+              {fmtPathUsd(w.balancePathUsd)} <span>pathUSD</span>
+            </div>
+          </div>
+        ))}
+        {wallets.length > SHOWN_WALLETS && (
+          <div className="walletCard">
+            <div className="cardName">…and</div>
+            <div className="walletBal">{wallets.length - SHOWN_WALLETS} more</div>
           </div>
         )}
-        {job?.deliverable?.extras?.openui ? (
-          <div className="ouiWrap">
-            <div className="ouiLabel">Deliverable view — designed by {skill.ownerAgent} (OpenUI)</div>
-            <Renderer
-              response={rewriteRenderUrls(job.deliverable.extras.openui)}
-              library={deliverableLibrary}
-              isStreaming={false}
-            />
+      </div>
+
+      <h3 className="sectionLabel rise" style={{ animationDelay: "0.42s" }}>Transactions</h3>
+      <div className="panel rise" style={{ animationDelay: "0.48s", padding: "10px 24px" }}>
+        {txs.length === 0 && <div className="empty" style={{ padding: "14px 0" }}>Waiting for the first trade…</div>}
+        {txs.length > 0 && (
+          <table className="txTable">
+            <thead>
+              <tr>
+                <th>time</th>
+                <th>skill</th>
+                <th>buyer → seller</th>
+                <th className="thRight">amount</th>
+                <th>on-chain receipt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {txs.slice(0, SHOWN_TXS).map((tx) => (
+                <tr key={tx.txId} className={tx.txId === latestTxId.current ? "txFresh" : undefined}>
+                  <td className="txTime">{new Date(tx.timestamp).toLocaleTimeString()}</td>
+                  <td>{skillName(tx.skillId)}</td>
+                  <td className="txAgents">
+                    {tx.buyerAgent} → {tx.sellerAgent}
+                  </td>
+                  <td className="txAmount"><Usd amount={tx.amountUsd} /></td>
+                  <td className="txReceipt" title={tx.receipt}>{shortHash(tx.receipt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {txs.length > SHOWN_TXS && (
+          <div className="empty" style={{ padding: "10px 0" }}>
+            showing the latest {SHOWN_TXS} of {txs.length} trades
           </div>
-        ) : (
-          videoUrl && <video src={videoUrl} controls autoPlay loop />
         )}
       </div>
     </div>
