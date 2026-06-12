@@ -3,7 +3,7 @@
  * Changing anything here requires a ping in the team channel — both halves depend on it.
  */
 
-/** A skill listed on the Agent App Store. */
+/** A skill listed on the Skill Store. */
 export interface SkillListing {
   id: string;
   name: string;

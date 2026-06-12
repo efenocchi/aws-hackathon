@@ -2,7 +2,7 @@
 
 ## Project name
 
-**Agent App Store** — the first storefront of the agent economy
+**Skill Store** — the first storefront of the agent economy
 
 ## Tagline
 

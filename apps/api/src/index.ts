@@ -281,4 +281,4 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
 
 const port = Number(process.env.PORT ?? 4000);
 serve({ fetch: app.fetch, port });
-console.log(`Agent App Store API on :${port} — ${skills.size} skills listed`);
+console.log(`Skill Store API on :${port} — ${skills.size} skills listed`);
