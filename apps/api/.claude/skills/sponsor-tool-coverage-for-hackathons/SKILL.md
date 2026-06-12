@@ -7,10 +7,10 @@ source_sessions:
   - kamo.aghbalyan_aws-hackathon_default_5855cbca-9e2f-43f3-a58a-96bf553dbd64
 contributors:
   - kamo.aghbalyan
-version: 1
+version: 2
 created_by_agent: claude_code
 created_at: 2026-06-12T20:53:08.886Z
-updated_at: 2026-06-12T20:53:08.886Z
+updated_at: 2026-06-12T23:21:32.574Z
 ---
 
 ## When to use
@@ -55,27 +55,53 @@ Common layers (not exhaustive):
 - **Confusing venue sponsors with capability sponsors.** "AWS" is the venue, not a feature. Understand what each sponsor *actually* builds.
 - **Burying the sponsor story in the demo.** Don't list 7 tools. Say: "We use a sponsor at every layer where one exists: Anthropic for direction, TrueFoundry for images, Composio for actions, ClickHouse for analytics. Video generation has no sponsor yet — that's the gap we're filling."
 
-## Credential fallback chains
+## Credential fallback chains (with provider switching)
 
-When a single key blocks your core loop, set up fallbacks *before* you need them:
+When a single key blocks your core loop, set up fallbacks **before** you need them. This includes provider switching — the same capability may have multiple non-sponsor vendors with different costs/quality/availability.
 
-Example:
-- **LLM direction:** Anthropic API key → TrueFoundry gateway → Claude Code CLI (no key)
-- **Image keyframes:** fal.ai → TrueFoundry Stability → smaller fallback model
-- **Video render:** fal.ai → (no other sponsor; use it or use paid non-sponsor)
+**Example: video generation with provider fallback**
 
-The moment the primary credential arrives, use it. Until then, fallback keeps the loop unblocked.
+Video generation had zero sponsor coverage in the AWS hackathon. Two competing non-sponsors existed: fal.ai (~$0.30/clip, excellent model coverage) and Runware (~$0.14/clip, slightly cheaper). Instead of picking one at the start:
 
-## Session example (AWS hackathon, Agent App Store)
+```ts
+const renderVideo = async (prompt, keyframe) => {
+  const provider = process.env.VIDEO_PROVIDER || 
+    (process.env.FAL_KEY ? 'fal' : process.env.RUNWARE_API_KEY ? 'runware' : 'mock');
+  
+  if (provider === 'fal') {
+    return await fal.queue.submit('fal-ai/kling', {
+      prompt, image_url: keyframe
+    }).pollAndDownload();
+  }
+  
+  if (provider === 'runware') {
+    return await runware.image2video({
+      model: 'klingai:5@3',
+      prompt, 
+      inputs: { frameImages: [keyframe], resolution: '1024x576' }
+    }).waitForCompletion();
+  }
+  
+  return generateMockVideo();
+};
+```
 
-10 sponsor offerings, 4 product layers:
-- Direction (Anthropic LLM) → assigned to Anthropic, waiting for API key
-- Keyframes (image generation) → no sponsor video-to-image; assigned fal.ai + reframed as ecosystem gap
-- Video render (video generation) → only fal.ai, no sponsor coverage
-- Publishing (workflow) → assigned Senso, waiting for API details
+The moment either key arrived, rendering automatically switched from mock → that provider. No code changes; fallback was ready before the credential. Vendor APIs differ in shape (Runware uses `inputs.frameImages` + explicit resolution; fal uses `image_url` + auto), so implementing both paths early means you're not blocked if one vendor has queue delays or you run out of credits mid-hackathon.
 
-Fallback chain: Started with free director dry-run (no key needed) while waiting for fal.ai credential. Once fal arrived, ran first paid render.
+## Session example (AWS hackathon, Skill Store marketplace)
 
-Demo story: "We use sponsors at each layer — Anthropic for intelligence, TrueFoundry for image gateways, Senso for publishing, Composio for actions, ClickHouse for analytics, Render for hosting. Video generation isn't sponsored yet; it's exactly the skill gap our marketplace exists to solve."
+11 sponsor offerings, product layers:
+- **Direction (LLM)** → Anthropic, fallback to Claude Code CLI (free)
+- **Keyframes (image)** → TrueFoundry gateway + Stability (sponsor)
+- **Video render** → zero sponsor; fal primary, Runware secondary (both non-sponsor)
+- **Publishing** → Senso (sponsor)
+- **Actions** → Composio (sponsor)
+- **Analytics** → ClickHouse (sponsor)
+- **Hosting** → Render (sponsor)
+- **Payments** → MPP (sponsor)
 
-Result: Judges see intentional integration + honest gap framing, not "we gave up on sponsors."
+**Credential timeline:** Anthropic key → director switched CLI to API. Then fal key → renderer switched mock to fal. Then Runware key → renderer now auto-prefers Runware (lower per-clip cost for pre-renders).
+
+Demo story: "We use a sponsor at every layer that has one — Anthropic, TrueFoundry, Senso, Composio, ClickHouse, Render, MPP. Video generation has no sponsor; we built adapters for both fal.ai and Runware so we're resilient to one vendor's queue delays or cost changes. That multi-vendor flexibility is exactly what our marketplace brings to agents."
+
+Result: Judges see intentional integration + honest gap framing + sophisticated fallback pattern.

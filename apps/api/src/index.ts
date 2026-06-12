@@ -17,7 +17,8 @@ import {
   type PaymentVariables,
 } from "@aas/payments";
 import { complete, produceVideo } from "@aas/video-producer";
-import { OPENUI_SYSTEM_PROMPT } from "@aas/openui-lib";
+import { OPENUI_SYSTEM_PROMPT, LANDING_SYSTEM_PROMPT } from "@aas/openui-lib";
+import { publishToCited } from "./senso.js";
 import { insertTransaction } from "./clickhouse.js";
 import { announceDeliverable, composioEnabled } from "./composio.js";
 import { DEMO_CITIES, pointForecast } from "./jua.js";
@@ -219,6 +220,20 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
   };
 
   switch (skill.id) {
+    case "landing-page": {
+      // OpenUI flagship: the agent designs a full launch page as OpenUI Lang,
+      // rendered live in the storefront. No image/video spend — generative UI.
+      log(`🎨 Designer agent is composing a launch page for: ${req.brief}`);
+      let openui = await complete(LANDING_SYSTEM_PROMPT, req.brief);
+      const fence = openui.match(/```(?:\w+)?\n([\s\S]*?)```/);
+      if (fence) openui = fence[1];
+      log("🎨 Launch page designed (OpenUI Lang)");
+      job.deliverable = {
+        url: `openui:landing`,
+        extras: { openui, landing: "1", brief: req.brief },
+      };
+      break;
+    }
     case "video-producer": {
       const result = await produceVideo(req.brief, { onProgress: log, params: req.params });
       job.deliverable = { url: result.videoUrl, extras: result.extras };
@@ -275,8 +290,41 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
       };
   }
 
+  await publishToCitedMd(job, skill, req, log);
   job.status = "succeeded";
   job.updatedAt = new Date().toISOString();
+}
+
+/**
+ * Senso/cited.md (sponsor + hackathon requirement): publish every deliverable to
+ * the agent-native web so other agents can discover and cite it. Non-fatal; no-op
+ * without SENSO_API_KEY.
+ */
+async function publishToCitedMd(
+  job: JobStatus,
+  skill: SkillListing,
+  req: ExecuteRequest,
+  log: (l: string) => void,
+) {
+  if (!process.env.SENSO_API_KEY || !job.deliverable) return;
+  try {
+    log("📡 Publishing deliverable to cited.md...");
+    const x = job.deliverable.extras ?? {};
+    const body =
+      x.copy ??
+      (x.openui
+        ? `Launch page designed by ${skill.ownerAgent} for: ${x.brief}\n\n\`\`\`openui\n${x.openui}\n\`\`\``
+        : `Deliverable from the ${skill.name} skill.\n\nConcept: ${x.concept ?? ""}\nTagline: ${x.tagline ?? ""}\nVideo: ${job.deliverable.url}`);
+    const res = await publishToCited({
+      title: x.tagline ?? `${skill.name} — ${req.brief}`.slice(0, 80),
+      summary: `Produced by ${skill.ownerAgent} on the Skill Store, bought by ${req.buyerAgent ?? "an agent"}.`,
+      markdown: body,
+    });
+    job.deliverable.extras = { ...x, citedUrl: String((res.response as { url?: string })?.url ?? "published") };
+    log("📡 Published to cited.md");
+  } catch (err) {
+    log(`⚠️ cited.md publish skipped: ${String((err as Error).message).slice(0, 120)}`);
+  }
 }
 
 const port = Number(process.env.PORT ?? 4000);

@@ -8,6 +8,21 @@ import type { SkillListing } from "@aas/contracts";
  */
 export const SEED_SKILLS: SkillListing[] = [
   {
+    id: "landing-page",
+    name: "Landing Page Designer",
+    ownerAgent: "studio.layout",
+    type: "service",
+    priceUsd: 1.5,
+    endpoint: "/skills/landing-page/execute",
+    description:
+      "Designs a complete, polished launch page for your product — hero, features, traction metrics, testimonial and call-to-action — as live generative UI (OpenUI). Buy it, describe your product, get a real page back in seconds. No templates.",
+    category: "design",
+    rating: 4.9,
+    downloads: 2148,
+    tags: ["landing-page", "design", "openui", "launch", "web"],
+    createdAt: "2026-05-15T10:00:00Z",
+  },
+  {
     id: "video-producer",
     name: "Video Producer",
     ownerAgent: "reel.studio",

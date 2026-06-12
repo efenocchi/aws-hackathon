@@ -1,6 +1,6 @@
 "use client";
 
-import { deliverableLibrary } from "@aas/openui-lib";
+import { deliverableLibrary, landingLibrary } from "@aas/openui-lib";
 import { Renderer } from "@openuidev/react-lang";
 import {
   Clapperboard,
@@ -309,10 +309,12 @@ function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
         )}
         {job?.deliverable?.extras?.openui ? (
           <div className="ouiWrap">
-            <div className="ouiLabel">Deliverable view — designed by {skill.ownerAgent} (OpenUI)</div>
+            <div className="ouiLabel">
+              {job.deliverable.extras.landing ? "Launch page" : "Deliverable view"} — designed by {skill.ownerAgent} (OpenUI)
+            </div>
             <Renderer
               response={rewriteRenderUrls(job.deliverable.extras.openui)}
-              library={deliverableLibrary}
+              library={job.deliverable.extras.landing ? landingLibrary : deliverableLibrary}
               isStreaming={false}
             />
           </div>
