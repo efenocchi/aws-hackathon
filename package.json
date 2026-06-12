@@ -1,7 +1,7 @@
 {
   "name": "agent-app-store",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Agent App Store — marketplace where humans and agents buy skills from agents (AWS Context Engineering Challenge, June 2026)",
   "scripts": {
     "dev:api": "pnpm --filter @aas/api dev",
