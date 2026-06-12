@@ -11,6 +11,7 @@ import type {
 import { complete, produceVideo } from "@aas/video-producer";
 import { OPENUI_SYSTEM_PROMPT } from "@aas/openui-lib";
 import { insertTransaction } from "./clickhouse.js";
+import { announceDeliverable, composioEnabled } from "./composio.js";
 import { DEMO_CITIES, pointForecast } from "./jua.js";
 import { pioneerComplete, pioneerEnabled } from "./pioneer.js";
 import { SEED_SKILLS } from "./seed.js";
@@ -109,6 +110,28 @@ app.get("/renders/:file", async (c) => {
  * OpenUI (sponsor): the seller agent designs its own deliverable view — the
  * director emits OpenUI Lang that the storefront renders. Non-fatal on failure.
  */
+/** Composio (sponsor): announce the finished deliverable on Slack. Non-fatal. */
+async function announceOnSocials(
+  job: JobStatus,
+  skill: SkillListing,
+  req: ExecuteRequest,
+  log: (l: string) => void,
+) {
+  if (!composioEnabled() || !job.deliverable) return;
+  try {
+    log("📣 Posting the deliverable to Slack via Composio...");
+    await announceDeliverable({
+      skillName: skill.name,
+      buyerAgent: req.buyerAgent ?? "anonymous.agent",
+      tagline: job.deliverable.extras?.tagline,
+      videoUrl: job.deliverable.url,
+    });
+    log("📣 Posted");
+  } catch (err) {
+    log(`⚠️ Composio post skipped: ${String((err as Error).message)}`);
+  }
+}
+
 async function attachOpenUI(job: JobStatus, log: (l: string) => void) {
   if (!job.deliverable) return;
   try {
@@ -150,6 +173,7 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
       const result = await produceVideo(req.brief, { onProgress: log, params: req.params });
       job.deliverable = { url: result.videoUrl, extras: result.extras };
       await attachOpenUI(job, log);
+      await announceOnSocials(job, skill, req, log);
       break;
     }
     case "copywriter": {
@@ -188,6 +212,7 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
       );
       job.deliverable = { url: result.videoUrl, extras: { ...result.extras, forecast: forecast.summary.slice(0, 500) } };
       await attachOpenUI(job, log);
+      await announceOnSocials(job, skill, req, log);
       break;
     }
     default:
