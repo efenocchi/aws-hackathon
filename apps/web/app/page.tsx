@@ -18,7 +18,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+import { fmtUsd, Usd } from "./lib/money";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? ""; // empty = same origin, proxied by next.config rewrites
 
 interface Skill {
   id: string;
@@ -183,7 +185,7 @@ export default function Store() {
                     <span>{s.downloads.toLocaleString()}</span>
                     <span className={`badge ${s.type}`}>{s.type}</span>
                   </div>
-                  <span className="price">${s.priceUsd.toFixed(2)}</span>
+                  <span className="price"><Usd amount={s.priceUsd} /></span>
                 </div>
               </article>
             );
@@ -198,7 +200,7 @@ export default function Store() {
               <div key={row.id} className="lbRow">
                 <span className="lbRank">{i + 1}</span>
                 <span>{row.name}</span>
-                <span className="lbSales">${row.usd.toFixed(2)}</span>
+                <span className="lbSales"><Usd amount={row.usd} /></span>
               </div>
             ))}
           </div>
@@ -213,7 +215,7 @@ export default function Store() {
                     {tx.buyerAgent} → {tx.sellerAgent} · {tx.rail.toUpperCase()}
                   </div>
                 </div>
-                <span className="txAmount">${tx.amountUsd.toFixed(2)}</span>
+                <span className="txAmount"><Usd amount={tx.amountUsd} /></span>
               </div>
             ))}
           </div>
@@ -273,7 +275,7 @@ function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
           <div>
             <h2>{skill.name}</h2>
             <div className="owner">
-              by {skill.ownerAgent} · ${skill.priceUsd.toFixed(2)} per {skill.type === "service" ? "run" : "copy"}
+              by {skill.ownerAgent} · {fmtUsd(skill.priceUsd)} per {skill.type === "service" ? "run" : "copy"}
             </div>
           </div>
         </div>
@@ -288,13 +290,13 @@ function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
               placeholder="Describe what you want produced…"
             />
             <button className="buyBtn" onClick={execute} disabled={busy || !brief}>
-              {busy ? "Working…" : `Buy & run — $${skill.priceUsd.toFixed(2)} via MPP`}
+              {busy ? "Working…" : `Buy & run — ${fmtUsd(skill.priceUsd)} via MPP`}
             </button>
           </>
         ) : (
           <a href={skill.sourceUrl} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
             <button className="buyBtn" style={{ marginTop: 16 }}>
-              Buy package — ${skill.priceUsd.toFixed(2)} via MPP
+              Buy package — {fmtUsd(skill.priceUsd)} via MPP
             </button>
           </a>
         )}

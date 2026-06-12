@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+import { fmtPathUsd, sumUsd, Usd } from "../lib/money";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? ""; // empty = same origin, proxied by next.config rewrites
 const MAX_TXS = 1000; // kept in state
 const SHOWN_TXS = 300; // rendered rows
 const SHOWN_WALLETS = 12;
@@ -87,7 +89,7 @@ export default function Activity() {
   }, [skills]);
 
   const stats = useMemo(() => {
-    const volume = txs.reduce((sum, t) => sum + t.amountUsd, 0);
+    const volume = sumUsd(txs.map((t) => t.amountUsd));
     const buyers = new Set(txs.map((t) => t.buyerAgent)).size;
     const cutoff = Date.now() - 60_000;
     const lastMinute = txs.filter((t) => new Date(t.timestamp).getTime() >= cutoff).length;
@@ -139,7 +141,7 @@ export default function Activity() {
         <div className="walletCard">
           <div className="cardName">Volume</div>
           <div className="walletBal">
-            {stats.volume.toFixed(2)} <span>pathUSD</span>
+            <Usd amount={stats.volume} /> <span>pathUSD</span>
           </div>
         </div>
         <div className="walletCard">
@@ -159,8 +161,8 @@ export default function Activity() {
           <div key={w.address} className="walletCard">
             <div className="cardName">{w.agent}</div>
             <div className="walletAddr" title={w.address}>{shortHash(w.address)}</div>
-            <div className="walletBal">
-              {w.balancePathUsd} <span>pathUSD</span>
+            <div className="walletBal" title={`${w.balancePathUsd} pathUSD`}>
+              {fmtPathUsd(w.balancePathUsd)} <span>pathUSD</span>
             </div>
           </div>
         ))}
@@ -182,19 +184,19 @@ export default function Activity() {
                 <th>time</th>
                 <th>skill</th>
                 <th>buyer → seller</th>
-                <th>amount</th>
+                <th className="thRight">amount</th>
                 <th>on-chain receipt</th>
               </tr>
             </thead>
             <tbody>
               {txs.slice(0, SHOWN_TXS).map((tx) => (
-                <tr key={tx.txId} style={tx.txId === latestTxId.current ? { background: "rgba(52, 199, 89, 0.08)" } : undefined}>
+                <tr key={tx.txId} className={tx.txId === latestTxId.current ? "txFresh" : undefined}>
                   <td className="txTime">{new Date(tx.timestamp).toLocaleTimeString()}</td>
                   <td>{skillName(tx.skillId)}</td>
                   <td className="txAgents">
                     {tx.buyerAgent} → {tx.sellerAgent}
                   </td>
-                  <td className="txAmount">${tx.amountUsd.toFixed(2)}</td>
+                  <td className="txAmount"><Usd amount={tx.amountUsd} /></td>
                   <td className="txReceipt" title={tx.receipt}>{shortHash(tx.receipt)}</td>
                 </tr>
               ))}
