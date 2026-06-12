@@ -30,6 +30,19 @@ services:
         sync: false
 
   - type: web
+    name: aas-mcp
+    runtime: node
+    plan: starter
+    buildCommand: corepack enable && pnpm install
+    startCommand: pnpm --filter @aas/mcp-server start
+    envVars:
+      - key: MARKET_URL
+        fromService:
+          type: web
+          name: aas-api
+          envVarKey: RENDER_EXTERNAL_URL
+
+  - type: web
     name: aas-web
     runtime: node
     plan: starter
