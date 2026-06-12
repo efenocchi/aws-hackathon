@@ -5,6 +5,16 @@ import { promisify } from "node:util";
 import { CONFIG } from "./config.js";
 import { directStoryboard } from "./director.js";
 import { falRun, type FalImageResult, type FalVideoResult } from "./fal.js";
+import { runwareImage, runwareVideo } from "./runware.js";
+
+/** Render provider: fal (default) or runware — whichever has a key, or VIDEO_PROVIDER override. */
+function renderProvider(): "fal" | "runware" {
+  const forced = process.env.VIDEO_PROVIDER as "fal" | "runware" | undefined;
+  if (forced) return forced;
+  if (process.env.FAL_KEY) return "fal";
+  if (process.env.RUNWARE_API_KEY) return "runware";
+  return "fal";
+}
 
 const execFileP = promisify(execFile);
 
@@ -30,6 +40,7 @@ export async function produceVideo(
   { onProgress = () => {}, params }: ProduceOptions = {},
 ): Promise<ProduceResult> {
   const t0 = Date.now();
+  const provider = renderProvider();
   const videoModel = (params?.videoModel as string) ?? CONFIG.fal.videoModel;
 
   onProgress(`🎬 Director is writing the concept for: "${brief}"`);
@@ -37,29 +48,34 @@ export async function produceVideo(
   onProgress(`📋 Concept: ${board.concept}`);
   onProgress(`🪧 Tagline: "${board.tagline}" — ${board.shots.length} shots`);
 
-  onProgress(`🖼️ Rendering ${board.shots.length} keyframes (${CONFIG.fal.imageModel})...`);
+  onProgress(`🖼️ Rendering ${board.shots.length} keyframes (${provider})...`);
   const keyframes = await Promise.all(
     board.shots.map((shot) =>
-      falRun<FalImageResult>(CONFIG.fal.imageModel, {
-        prompt: shot.imagePrompt,
-        image_size: "landscape_16_9",
-        num_images: 1,
-      }).then((r) => r.images[0].url),
+      provider === "runware"
+        ? runwareImage(shot.imagePrompt)
+        : falRun<FalImageResult>(CONFIG.fal.imageModel, {
+            prompt: shot.imagePrompt,
+            image_size: "landscape_16_9",
+            num_images: 1,
+          }).then((r) => r.images[0].url),
     ),
   );
   onProgress(`🖼️ Keyframes done in ${sec(t0)}s`);
 
-  onProgress(`🎥 Animating ${board.shots.length} shots in parallel (${videoModel})...`);
+  onProgress(`🎥 Animating ${board.shots.length} shots in parallel (${provider})...`);
   const clips = await Promise.all(
     board.shots.map((shot, i) =>
-      falRun<FalVideoResult>(videoModel, {
-        image_url: keyframes[i],
-        prompt: shot.motionPrompt,
-        duration: CONFIG.shots.secondsPerShot,
-        resolution: CONFIG.shots.resolution,
-      }).then((r) => {
+      (provider === "runware"
+        ? runwareVideo(keyframes[i], shot.motionPrompt, CONFIG.shots.secondsPerShot)
+        : falRun<FalVideoResult>(videoModel, {
+            image_url: keyframes[i],
+            prompt: shot.motionPrompt,
+            duration: CONFIG.shots.secondsPerShot,
+            resolution: CONFIG.shots.resolution,
+          }).then((r) => r.video.url)
+      ).then((url) => {
         onProgress(`  ✓ shot ${i + 1}/${board.shots.length}: ${shot.title}`);
-        return r.video.url;
+        return url;
       }),
     ),
   );
