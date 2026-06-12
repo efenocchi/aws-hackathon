@@ -47,7 +47,7 @@ export async function runwareImage(prompt: string): Promise<string> {
       model: MODELS.image,
       positivePrompt: prompt,
       width: 1280,
-      height: 720,
+      height: 704, // Runware requires multiples of 64 (720 is rejected)
       numberResults: 1,
       includeCost: true,
     },
@@ -68,10 +68,11 @@ export async function runwareVideo(
       taskUUID,
       model: MODELS.video,
       positivePrompt: motionPrompt,
-      frameImages: [{ inputImage: imageUrl }],
+      inputs: { frameImages: [{ image: imageUrl, frame: "first" }] },
       duration: durationSec,
-      width: 1280,
-      height: 720,
+      resolution: process.env.RUNWARE_VIDEO_RESOLUTION ?? "720p",
+      outputType: "URL",
+      outputFormat: "MP4",
       deliveryMethod: "async",
       includeCost: true,
     },
@@ -80,7 +81,8 @@ export async function runwareVideo(
   const deadline = Date.now() + 8 * 60_000;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 3_000));
-    const items = await post([{ taskType: "getResponse", taskUUID: randomUUID(), forTaskUUID: taskUUID }]).catch(
+    // getResponse polls with the ORIGINAL task's UUID.
+    const items = await post([{ taskType: "getResponse", taskUUID }]).catch(
       () => [] as RunwareItem[],
     );
     const hit = items.find((i) => i.videoURL);
