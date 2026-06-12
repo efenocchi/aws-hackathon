@@ -20,12 +20,8 @@ services:
         sync: false
       - key: SENSO_API_KEY
         sync: false
-      - key: AWS_ACCESS_KEY_ID
+      - key: ANTHROPIC_API_KEY
         sync: false
-      - key: AWS_SECRET_ACCESS_KEY
-        sync: false
-      - key: AWS_REGION
-        value: us-west-2
       - key: CLICKHOUSE_URL
         sync: false
       - key: CLICKHOUSE_PASSWORD

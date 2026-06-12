@@ -76,12 +76,16 @@ export function buildMcpServer(market: MarketClient, buyer: Buyer): McpServer {
       // Scoped event capture: subscribe for the duration of this call only,
       // and only record events for this skill's execute URL.
       const payment: string[] = [];
+      let challenged = false;
       let receipted = false;
       const mine = (input: unknown) =>
         String(input ?? "").includes(`/skills/${encodeURIComponent(skillId)}/execute`);
       const unsubscribe = [
         buyer.mppx.on("challenge.received", (p) => {
-          if (mine(p.input)) payment.push(`402 challenge: ${describeChallenge(p.challenge)}`);
+          if (mine(p.input)) {
+            challenged = true;
+            payment.push(`402 challenge: ${describeChallenge(p.challenge)}`);
+          }
           return undefined;
         }),
         buyer.mppx.on("credential.created", (p) => {
@@ -102,7 +106,7 @@ export function buildMcpServer(market: MarketClient, buyer: Buyer): McpServer {
           buyerAgent: buyer.agentId,
           params,
         });
-        if (skill.type === "service" && skill.priceUsd > 0 && !receipted)
+        if (skill.type === "service" && skill.priceUsd > 0 && (!challenged || !receipted))
           throw new Error(
             `paid skill ${skillId} ($${skill.priceUsd}) executed without an MPP challenge/receipt — seller endpoint is ungated, refusing unpaid execution (job ${jobId})`,
           );

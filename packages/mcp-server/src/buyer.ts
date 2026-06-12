@@ -79,6 +79,7 @@ function loadOrCreateWallet(file: string): {
     ),
     { mode: 0o600 },
   );
+  chmodSync(file, 0o600);
   return { privateKey, created: true };
 }
 
