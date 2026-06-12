@@ -34,7 +34,9 @@ jobs:
           # workflow re-run the event SHA may be stale and the guard would
           # consult an older commit message, double-bumping the version.
           git fetch origin main --depth=1
-          COMMIT_MSG=$(git log -1 --pretty=%B origin/main)
+          # Subject line only (%s, not %B): a commit whose BODY merely
+          # mentions "release: v..." at a line start must not trip the guard.
+          COMMIT_MSG=$(git log -1 --pretty=%s origin/main)
           if echo "$COMMIT_MSG" | grep -qE "^release: v"; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             # On a re-run after the bump already landed, the event checkout
