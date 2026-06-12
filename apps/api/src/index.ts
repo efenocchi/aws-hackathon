@@ -8,7 +8,13 @@ import type {
   SkillListing,
   Transaction,
 } from "@aas/contracts";
-import { createPaymentGate, type PaymentVariables } from "@aas/payments";
+import {
+  createPaymentGate,
+  listManagedWallets,
+  pathUsdBalance,
+  PATH_USD_DECIMALS,
+  type PaymentVariables,
+} from "@aas/payments";
 import { complete, produceVideo } from "@aas/video-producer";
 import { OPENUI_SYSTEM_PROMPT } from "@aas/openui-lib";
 import { insertTransaction } from "./clickhouse.js";
@@ -101,6 +107,21 @@ app.get("/jobs/:id", (c) => {
 });
 
 app.get("/transactions", (c) => c.json(transactions.slice(-100).reverse()));
+
+// Custodial agent wallets with live on-chain pathUSD balances.
+app.get("/wallets", async (c) => {
+  const wallets = await Promise.all(
+    listManagedWallets().map(async ({ name, address }) => {
+      const raw = await pathUsdBalance(address);
+      return {
+        agent: name,
+        address,
+        balancePathUsd: (Number(raw) / 10 ** PATH_USD_DECIMALS).toFixed(6),
+      };
+    }),
+  );
+  return c.json(wallets);
+});
 
 // Rendered videos (local dev; S3 presigned URLs in prod).
 app.get("/renders/:file", async (c) => {

@@ -14,7 +14,7 @@ const Storyboard = defineComponent({
     concept: z.string().describe("One-sentence production concept"),
     tagline: z.string().describe("The spot's tagline"),
   }),
-  component: ({ concept, tagline }) => (
+  component: ({ props: { concept, tagline } }) => (
     <div className="ouiBoard">
       <div className="ouiTagline">“{tagline}”</div>
       <p className="ouiConcept">{concept}</p>
@@ -36,7 +36,7 @@ const ShotList = defineComponent({
       )
       .describe("Shots in order"),
   }),
-  component: ({ shots }) => (
+  component: ({ props: { shots } }) => (
     <div className="ouiShots">
       {shots.map((s, i) => (
         <figure key={i} className="ouiShot">
@@ -59,7 +59,7 @@ const PromoVideo = defineComponent({
   props: z.object({
     url: z.string().describe("MP4 URL of the finished promo"),
   }),
-  component: ({ url }) => <video className="ouiVideo" src={url} controls autoPlay loop />,
+  component: ({ props: { url } }) => <video className="ouiVideo" src={url} controls autoPlay loop />,
 });
 
 const shotSchema = z.object({
@@ -78,7 +78,7 @@ const Deliverable = defineComponent({
     videoUrl: z.string().describe("MP4 URL of the finished promo"),
     shots: z.array(shotSchema).describe("Shots in order"),
   }),
-  component: ({ concept, tagline, videoUrl, shots }) => (
+  component: ({ props: { concept, tagline, videoUrl, shots } }) => (
     <div>
       <div className="ouiBoard">
         <div className="ouiTagline">“{tagline}”</div>

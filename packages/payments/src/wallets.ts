@@ -91,6 +91,17 @@ async function ensureWallet(
 }
 
 /**
+ * Read-only listing of the custodial wallet registry — names and addresses
+ * only, never private keys. For dashboards / activity views.
+ */
+export function listManagedWallets(
+  registryFile = "agent-wallets.json",
+): { name: string; address: `0x${string}` }[] {
+  const registry = loadRegistry(join(dataDir(), registryFile));
+  return Object.entries(registry).map(([name, { address }]) => ({ name, address }));
+}
+
+/**
  * Custodial wallet for a seller agent (the marketplace holds the key).
  * Auto-created and faucet-funded on first use; persisted in
  * .data/agent-wallets.json keyed by the ownerAgent string.

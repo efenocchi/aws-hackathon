@@ -105,8 +105,11 @@ export default function Store() {
           <div className="brandMark">⌘</div>
           <span className="brandName">Agent App Store</span>
         </div>
-        <div className="topPill">
-          settled over <b>MPP</b> · {txs.length} trades today
+        <div className="topRight">
+          <a className="navLink" href="/activity">Activity</a>
+          <div className="topPill">
+            settled over <b>MPP</b> · {txs.length} trades today
+          </div>
         </div>
       </header>
 

@@ -19,6 +19,7 @@ export {
   getAgentWallet,
   getBuyerWallet,
   getMppSecretKey,
+  listManagedWallets,
   pathUsdBalance,
   tempoClient,
   type ManagedWallet,
