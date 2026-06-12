@@ -1,0 +1,171 @@
+import type { SkillListing } from "@aas/contracts";
+
+/**
+ * Catalog seed. Open-source skills scraped from well-known repos are listed
+ * under the ownership-primitive model: each skill is held by a single agent,
+ * even when the underlying code is public. Our own service skills (video-producer,
+ * copywriter) are the executable listings.
+ */
+export const SEED_SKILLS: SkillListing[] = [
+  {
+    id: "video-producer",
+    name: "Video Producer",
+    ownerAgent: "reel.studio",
+    type: "service",
+    priceUsd: 2.5,
+    endpoint: "/skills/video-producer/execute",
+    description:
+      "Full promo-video production: a frontier-model creative director writes the concept, storyboard and shot prompts; a render farm of diffusion video models produces the footage; delivered as a stitched, scored 30s spot.",
+    category: "video",
+    rating: 4.9,
+    downloads: 1287,
+    tags: ["video", "promo", "advertising", "wan-2.6", "kling"],
+    createdAt: "2026-05-02T10:00:00Z",
+  },
+  {
+    id: "copywriter",
+    name: "Launch Copywriter",
+    ownerAgent: "quill.agency",
+    type: "service",
+    priceUsd: 0.4,
+    endpoint: "/skills/copywriter/execute",
+    description:
+      "Launch announcements, taglines, and landing copy with brand-voice control. Returns headline options, body copy, and social variants.",
+    category: "copywriting",
+    rating: 4.7,
+    downloads: 3411,
+    tags: ["copy", "launch", "marketing"],
+    createdAt: "2026-04-18T10:00:00Z",
+  },
+  {
+    id: "ui-ux-pro-max",
+    name: "UI/UX Pro Max",
+    ownerAgent: "pixelsmith.dev",
+    type: "package",
+    priceUsd: 1.0,
+    artifactUrl: "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+    sourceUrl: "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+    description:
+      "The famous design-system skill: 50+ styles, 97 fonts, 25 chart types, palette search engines, and per-stack guidance (React, Vue, Swift...). One of the most-installed agent skills on GitHub.",
+    category: "design",
+    rating: 4.8,
+    downloads: 18452,
+    tags: ["design", "ui", "ux", "design-system"],
+    createdAt: "2026-01-22T10:00:00Z",
+  },
+  {
+    id: "llm-wiki",
+    name: "LLM Wiki",
+    ownerAgent: "athena.research",
+    type: "package",
+    priceUsd: 0.5,
+    artifactUrl:
+      "https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md",
+    sourceUrl: "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f",
+    description:
+      "Karpathy's living wiki on LLMs — distilled mental models, failure modes, and practical guidance. The canonical context pack for agents that reason about language models.",
+    category: "research",
+    rating: 5.0,
+    downloads: 25103,
+    tags: ["llm", "reference", "karpathy"],
+    createdAt: "2026-02-10T10:00:00Z",
+  },
+  {
+    id: "react-best-practices",
+    name: "React Best Practices",
+    ownerAgent: "vercel.bot",
+    type: "package",
+    priceUsd: 0.8,
+    artifactUrl: "https://github.com/vercel-labs/agent-skills",
+    sourceUrl: "https://vercel.com/blog/introducing-react-best-practices",
+    description:
+      "Vercel Engineering's performance playbook for React/Next.js as an installable agent skill: rendering, data fetching, bundle discipline, and the patterns Vercel uses internally.",
+    category: "engineering",
+    rating: 4.8,
+    downloads: 21940,
+    tags: ["react", "nextjs", "performance", "vercel"],
+    createdAt: "2026-03-05T10:00:00Z",
+  },
+  {
+    id: "web-design-guidelines",
+    name: "Web Interface Guidelines",
+    ownerAgent: "vercel.bot",
+    type: "package",
+    priceUsd: 0.6,
+    artifactUrl: "https://github.com/vercel-labs/web-interface-guidelines",
+    sourceUrl: "https://github.com/vercel-labs/web-interface-guidelines",
+    description:
+      "Audit any UI against accessibility and interface best practices — focus states, contrast, semantics, motion. The review checklist as a skill.",
+    category: "design",
+    rating: 4.6,
+    downloads: 9870,
+    tags: ["a11y", "design-review", "vercel"],
+    createdAt: "2026-03-12T10:00:00Z",
+  },
+  {
+    id: "document-toolkit",
+    name: "Document Toolkit (PDF/DOCX/PPTX/XLSX)",
+    ownerAgent: "scribe.works",
+    type: "package",
+    priceUsd: 1.2,
+    artifactUrl: "https://github.com/anthropics/skills",
+    sourceUrl: "https://github.com/anthropics/skills",
+    description:
+      "Anthropic's official document skills: create and edit PDFs, Word docs, slide decks and spreadsheets programmatically. The workhorse bundle for back-office agents.",
+    category: "engineering",
+    rating: 4.7,
+    downloads: 31200,
+    tags: ["pdf", "docx", "pptx", "xlsx", "anthropic"],
+    createdAt: "2026-01-08T10:00:00Z",
+  },
+  {
+    id: "clickhouse-analyst",
+    name: "ClickHouse Analyst",
+    ownerAgent: "vector.ops",
+    type: "package",
+    priceUsd: 0.9,
+    artifactUrl: "https://github.com/ClickHouse/agent-skills",
+    sourceUrl: "https://github.com/ClickHouse/agent-skills",
+    description:
+      "ClickHouse's official agent skills: schema design, query optimization, and operational analytics against live ClickHouse clusters.",
+    category: "data",
+    rating: 4.5,
+    downloads: 6730,
+    tags: ["clickhouse", "sql", "analytics"],
+    createdAt: "2026-04-30T10:00:00Z",
+  },
+  {
+    id: "market-research",
+    name: "Market Research Sprint",
+    ownerAgent: "athena.research",
+    type: "service",
+    priceUsd: 0.9,
+    endpoint: "/skills/market-research/execute",
+    description:
+      "Fan-out web research on a product or market: competitors, positioning, audience, pricing signals — synthesized into a cited brief.",
+    category: "research",
+    rating: 4.6,
+    downloads: 2204,
+    tags: ["research", "competitive-analysis"],
+    createdAt: "2026-05-20T10:00:00Z",
+  },
+  {
+    id: "social-scheduler",
+    name: "Social Launch Scheduler",
+    ownerAgent: "megaphone.io",
+    type: "service",
+    priceUsd: 0.3,
+    endpoint: "/skills/social-scheduler/execute",
+    description:
+      "Takes finished launch assets and pushes them to Slack, X, and YouTube on a coordinated schedule (powered by Composio managed auth).",
+    category: "marketing",
+    rating: 4.4,
+    downloads: 5121,
+    tags: ["social", "scheduling", "composio"],
+    createdAt: "2026-05-28T10:00:00Z",
+  },
+];
+
+if (process.argv.includes("--print")) {
+  console.log(JSON.stringify(SEED_SKILLS, null, 2));
+}
