@@ -58,7 +58,18 @@ jobs:
           git commit -m "release: v$VERSION"
           # Pushes made with the default GITHUB_TOKEN do not retrigger
           # workflows, so this cannot loop.
-          git push
+          #
+          # Main can advance mid-run (a PR merging between checkout and
+          # here rejects the push as non-fast-forward — happened on run
+          # 27448021952). Rebase the bump commit onto the new tip and
+          # retry; bump commits only touch package.json's version line
+          # and release runs are serialized, so the rebase stays clean.
+          for i in 1 2 3; do
+            if git push; then break; fi
+            if [ "$i" = 3 ]; then echo "push failed after 3 attempts"; exit 1; fi
+            git fetch origin main
+            git rebase origin/main || { git rebase --abort; exit 1; }
+          done
 
       - name: Extract version
         id: version
