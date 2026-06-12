@@ -112,6 +112,42 @@ export async function produceVideo(
   };
 }
 
+/**
+ * Single-image production: brief in, campaign key art out. Same provider and
+ * spend gating as produceVideo; mock is a deterministic placeholder.
+ */
+export async function produceImage(
+  prompt: string,
+  { onProgress = () => {} }: ProduceOptions = {},
+): Promise<{ url: string; extras: Record<string, string> }> {
+  const t0 = Date.now();
+  const provider = renderProvider();
+  onProgress(`🖼️ Rendering key art (${provider})...`);
+  const remote =
+    provider === "mock"
+      ? MOCK.keyframe((prompt.length * 7) % 1000)
+      : provider === "runware"
+        ? await runwareImage(prompt)
+        : await falRun<FalImageResult>(CONFIG.fal.imageModel, {
+            prompt,
+            image_size: "landscape_16_9",
+            num_images: 1,
+          }).then((r) => r.images[0].url);
+
+  // Persist real renders locally so the marketplace serves a stable URL;
+  // mock placeholders stay remote (nothing to persist).
+  let url = remote;
+  if (provider !== "mock") {
+    await mkdir(CONFIG.outDir, { recursive: true });
+    const p = join(CONFIG.outDir, `${Date.now().toString(36)}-poster.png`);
+    const res = await fetch(remote);
+    await writeFile(p, Buffer.from(await res.arrayBuffer()));
+    url = p;
+  }
+  onProgress(`✅ Key art ready in ${sec(t0)}s`);
+  return { url, extras: { prompt } };
+}
+
 async function stitch(clipUrls: string[]): Promise<string> {
   await mkdir(CONFIG.outDir, { recursive: true });
   const id = Date.now().toString(36);

@@ -16,7 +16,7 @@ import {
   PATH_USD_DECIMALS,
   type PaymentVariables,
 } from "@aas/payments";
-import { complete, produceVideo } from "@aas/video-producer";
+import { complete, produceImage, produceVideo } from "@aas/video-producer";
 import { OPENUI_SYSTEM_PROMPT } from "@aas/openui-lib";
 import { insertTransaction } from "./clickhouse.js";
 import { announceDeliverable, composioEnabled } from "./composio.js";
@@ -77,6 +77,8 @@ app.post("/skills/:id/execute", paymentGate, async (c) => {
     jobId,
     skillId: skill.id,
     status: "queued",
+    brief: body.brief,
+    buyerAgent: body.buyerAgent ?? "anonymous.agent",
     progress: [],
     createdAt: now,
     updatedAt: now,
@@ -113,6 +115,30 @@ app.get("/transactions", (c) => {
   return c.json(transactions.slice(-limit).reverse());
 });
 
+/** Local render paths become /renders/<file>; remote and data: URLs pass through. */
+const publicArtifactUrl = (url: string) =>
+  url.startsWith("/") ? `/renders/${url.split("/").pop()}` : url;
+
+// Gallery feed: succeeded jobs with their artifacts, newest first.
+app.get("/deliverables", (c) => {
+  const limit = Math.min(Number(c.req.query("limit") ?? 60) || 60, 200);
+  const items = [...jobs.values()]
+    .filter((j) => j.status === "succeeded" && j.deliverable)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, limit)
+    .map((j) => ({
+      jobId: j.jobId,
+      skillId: j.skillId,
+      skillName: skills.get(j.skillId)?.name ?? j.skillId,
+      buyerAgent: j.buyerAgent ?? "anonymous.agent",
+      brief: j.brief ?? "",
+      url: publicArtifactUrl(j.deliverable!.url),
+      extras: j.deliverable!.extras ?? {},
+      completedAt: j.updatedAt,
+    }));
+  return c.json(items);
+});
+
 // Live transaction stream: one SSE event per settled trade, for the activity
 // dashboard. Backlog comes from GET /transactions; this only pushes new ones.
 app.get("/events", (c) =>
@@ -144,14 +170,24 @@ app.get("/wallets", async (c) => {
   return c.json(wallets);
 });
 
-// Rendered videos (local dev; S3 presigned URLs in prod).
+// Rendered artifacts — videos and poster images (local dev; S3 presigned URLs in prod).
+const RENDER_TYPES: Record<string, string> = {
+  mp4: "video/mp4",
+  webm: "video/webm",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+};
+
 app.get("/renders/:file", async (c) => {
   const { createReadStream, existsSync } = await import("node:fs");
   const { join, basename } = await import("node:path");
   const dir = process.env.RENDERS_DIR ?? join(process.cwd(), "../../renders");
   const path = join(dir, basename(c.req.param("file")));
   if (!existsSync(path)) return c.json({ error: "not found" }, 404);
-  c.header("Content-Type", "video/mp4");
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  c.header("Content-Type", RENDER_TYPES[ext] ?? "application/octet-stream");
   return c.body(createReadStream(path) as unknown as ReadableStream);
 });
 
@@ -265,14 +301,35 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
       await announceOnSocials(job, skill, req, log);
       break;
     }
+    case "market-research": {
+      const RESEARCH_SYSTEM =
+        "You are a senior market analyst. Given a brief, return a tight markdown research brief with sections: ## Market snapshot, ## Competitors (3-4, one line each), ## Positioning angles (3 bullets), ## Pricing signals, ## Bottom line. Name concrete companies and numbers. Under 350 words. No preamble.";
+      log(`🔎 Analyst researching: ${req.brief}`);
+      const copy = await complete(RESEARCH_SYSTEM, req.brief);
+      job.deliverable = { url: "data:text/markdown", extras: { copy, provider: "claude" } };
+      log("✅ Research brief delivered");
+      break;
+    }
+    case "social-scheduler": {
+      const SOCIAL_SYSTEM =
+        "You are a social launch planner. Given a brief, return a markdown 5-day posting calendar: one ## Day N heading per day with channel (X / LinkedIn / YouTube), the actual post copy, and best posting time. Punchy and concrete. Under 300 words. No preamble.";
+      log(`📅 Planning launch calendar: ${req.brief}`);
+      const copy = await complete(SOCIAL_SYSTEM, req.brief);
+      job.deliverable = { url: "data:text/markdown", extras: { copy, provider: "claude" } };
+      log("✅ Calendar delivered");
+      break;
+    }
+    case "poster-studio": {
+      const result = await produceImage(
+        `Premium campaign key art: ${req.brief}. Cinematic lighting, rich color grading, editorial composition, no text or typography.`,
+        { onProgress: log },
+      );
+      job.deliverable = { url: result.url, extras: result.extras };
+      break;
+    }
     default:
-      // Remaining service skills are demo stubs until implemented.
-      log(`Executing ${skill.name} for brief: ${req.brief}`);
-      await new Promise((r) => setTimeout(r, 1500));
-      job.deliverable = {
-        url: `https://example.com/deliverables/${job.jobId}.md`,
-        extras: { note: "stub deliverable" },
-      };
+      // Every seeded service has an executor; a miss is a catalog bug, not a demo path.
+      throw new Error(`no executor for skill ${skill.id}`);
   }
 
   job.status = "succeeded";
