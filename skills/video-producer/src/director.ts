@@ -74,7 +74,7 @@ async function viaClaudeCode(user: string, system: string = SYSTEM): Promise<str
   const { promisify } = await import("node:util");
   const { stdout } = await promisify(execFile)(
     "claude",
-    ["-p", user, "--append-system-prompt", system, "--max-turns", "1"],
+    ["-p", user, "--append-system-prompt", system, "--max-turns", "3"],
     { maxBuffer: 10 * 1024 * 1024, timeout: 180_000 },
   );
   const text = stdout.trim();

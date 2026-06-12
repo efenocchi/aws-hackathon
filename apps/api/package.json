@@ -10,6 +10,7 @@
   "dependencies": {
     "@aas/contracts": "workspace:*",
     "@aas/openui-lib": "workspace:^",
+    "@aas/payments": "workspace:*",
     "@aas/video-producer": "workspace:*",
     "@clickhouse/client": "^1.20.0",
     "@composio/core": "^0.10.0",

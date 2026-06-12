@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { streamSSE } from "hono/streaming";
 import { randomUUID } from "node:crypto";
 import type {
   ExecuteRequest,
@@ -8,6 +9,13 @@ import type {
   SkillListing,
   Transaction,
 } from "@aas/contracts";
+import {
+  createPaymentGate,
+  listManagedWallets,
+  pathUsdBalance,
+  PATH_USD_DECIMALS,
+  type PaymentVariables,
+} from "@aas/payments";
 import { complete, produceVideo } from "@aas/video-producer";
 import { OPENUI_SYSTEM_PROMPT } from "@aas/openui-lib";
 import { insertTransaction } from "./clickhouse.js";
@@ -19,8 +27,9 @@ import { SEED_SKILLS } from "./seed.js";
 const skills = new Map<string, SkillListing>(SEED_SKILLS.map((s) => [s.id, s]));
 const jobs = new Map<string, JobStatus>();
 const transactions: Transaction[] = [];
+const txSubscribers = new Set<(tx: Transaction) => void>();
 
-const app = new Hono();
+const app = new Hono<{ Variables: PaymentVariables }>();
 app.use("*", cors());
 
 app.get("/health", (c) => c.json({ ok: true, skills: skills.size }));
@@ -45,13 +54,19 @@ app.get("/skills/:id", (c) => {
   return skill ? c.json(skill) : c.json({ error: "not found" }, 404);
 });
 
-// NOTE for Emanuele: mount the MPP paymentMiddleware on this route.
-// Until then, executions record a mock transaction so the leaderboard works.
-app.post("/skills/:id/execute", async (c) => {
+// MPP payment gate: charges skill.priceUsd in pathUSD (Tempo testnet) to the
+// owner agent's wallet. Unpaid requests get a 402 challenge and never reach
+// the handler — no job, no transaction.
+const paymentGate = createPaymentGate({ getSkill: (id) => skills.get(id) });
+
+app.post("/skills/:id/execute", paymentGate, async (c) => {
   const skill = skills.get(c.req.param("id"));
   if (!skill) return c.json({ error: "not found" }, 404);
   if (skill.type !== "service")
     return c.json({ error: "package skills are purchased, not executed" }, 400);
+
+  const payment = c.get("paymentReceipt");
+  if (!payment) return c.json({ error: "payment receipt missing" }, 500);
 
   const body = (await c.req.json()) as ExecuteRequest;
   if (!body.brief) return c.json({ error: "brief required" }, 400);
@@ -75,7 +90,7 @@ app.post("/skills/:id/execute", async (c) => {
     sellerAgent: skill.ownerAgent,
     amountUsd: skill.priceUsd,
     rail: "mpp",
-    receipt: "mock-pending-mpp-integration",
+    receipt: payment.reference,
     timestamp: now,
   });
 
@@ -93,7 +108,41 @@ app.get("/jobs/:id", (c) => {
   return job ? c.json(job) : c.json({ error: "not found" }, 404);
 });
 
-app.get("/transactions", (c) => c.json(transactions.slice(-100).reverse()));
+app.get("/transactions", (c) => {
+  const limit = Math.min(Number(c.req.query("limit") ?? 100) || 100, 1000);
+  return c.json(transactions.slice(-limit).reverse());
+});
+
+// Live transaction stream: one SSE event per settled trade, for the activity
+// dashboard. Backlog comes from GET /transactions; this only pushes new ones.
+app.get("/events", (c) =>
+  streamSSE(c, async (stream) => {
+    const send = (tx: Transaction) => {
+      void stream.writeSSE({ event: "tx", data: JSON.stringify(tx), id: tx.txId });
+    };
+    txSubscribers.add(send);
+    stream.onAbort(() => txSubscribers.delete(send));
+    while (!stream.aborted) {
+      await stream.writeSSE({ event: "ping", data: String(transactions.length) });
+      await stream.sleep(15000);
+    }
+  }),
+);
+
+// Custodial agent wallets with live on-chain pathUSD balances.
+app.get("/wallets", async (c) => {
+  const wallets = await Promise.all(
+    listManagedWallets().map(async ({ name, address }) => {
+      const raw = await pathUsdBalance(address);
+      return {
+        agent: name,
+        address,
+        balancePathUsd: (Number(raw) / 10 ** PATH_USD_DECIMALS).toFixed(6),
+      };
+    }),
+  );
+  return c.json(wallets);
+});
 
 // Rendered videos (local dev; S3 presigned URLs in prod).
 app.get("/renders/:file", async (c) => {
@@ -157,6 +206,7 @@ async function attachOpenUI(job: JobStatus, log: (l: string) => void) {
 
 function recordTransaction(tx: Transaction) {
   transactions.push(tx);
+  for (const send of txSubscribers) send(tx);
   void insertTransaction(tx); // no-op until CLICKHOUSE_URL is set
 }
 

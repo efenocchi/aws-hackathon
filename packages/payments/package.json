@@ -1,0 +1,21 @@
+{
+  "name": "@aas/payments",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "e2e": "tsx scripts/e2e.ts",
+    "swarm": "tsx scripts/swarm.ts"
+  },
+  "dependencies": {
+    "@aas/contracts": "workspace:*",
+    "hono": "^4.6.0",
+    "mppx": "^0.7.0",
+    "viem": "^2.52.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
