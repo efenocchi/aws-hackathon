@@ -9,9 +9,9 @@ import { randomUUID } from "node:crypto";
 const BASE = process.env.RUNWARE_BASE_URL ?? "https://api.runware.ai/v1";
 
 const MODELS = {
-  // Defaults are best guesses — confirm AIR ids on runware.ai/models.
-  image: process.env.RUNWARE_IMAGE_MODEL ?? "runware:101@1", // FLUX.1 schnell
-  video: process.env.RUNWARE_VIDEO_MODEL ?? "klingai:5@3", // Kling i2v — VERIFY
+  // AIR ids verified via modelSearch 2026-06-12.
+  image: process.env.RUNWARE_IMAGE_MODEL ?? "runware:100@1", // FLUX Schnell
+  video: process.env.RUNWARE_VIDEO_MODEL ?? "alibaba:wan@2.6-flash", // Wan 2.6 Flash i2v
 };
 
 interface RunwareItem {
@@ -34,6 +34,8 @@ async function post(tasks: Record<string, unknown>[]): Promise<RunwareItem[]> {
   const body = (await res.json()) as { data?: RunwareItem[]; errors?: unknown[] };
   if (!res.ok || body.errors?.length)
     throw new Error(`runware ${res.status}: ${JSON.stringify(body.errors ?? body).slice(0, 500)}`);
+  for (const item of body.data ?? [])
+    if (item.cost !== undefined) console.log(`[runware] ${item.taskType} cost: $${item.cost}`);
   return body.data ?? [];
 }
 
@@ -47,6 +49,7 @@ export async function runwareImage(prompt: string): Promise<string> {
       width: 1280,
       height: 720,
       numberResults: 1,
+      includeCost: true,
     },
   ]);
   if (!item?.imageURL) throw new Error(`runware image: no imageURL in ${JSON.stringify(item)}`);
@@ -70,6 +73,7 @@ export async function runwareVideo(
       width: 1280,
       height: 720,
       deliveryMethod: "async",
+      includeCost: true,
     },
   ]);
 
