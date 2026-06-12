@@ -90,6 +90,17 @@ app.get("/jobs/:id", (c) => {
 
 app.get("/transactions", (c) => c.json(transactions.slice(-100).reverse()));
 
+// Rendered videos (local dev; S3 presigned URLs in prod).
+app.get("/renders/:file", async (c) => {
+  const { createReadStream, existsSync } = await import("node:fs");
+  const { join, basename } = await import("node:path");
+  const dir = process.env.RENDERS_DIR ?? join(process.cwd(), "../../renders");
+  const path = join(dir, basename(c.req.param("file")));
+  if (!existsSync(path)) return c.json({ error: "not found" }, 404);
+  c.header("Content-Type", "video/mp4");
+  return c.body(createReadStream(path) as unknown as ReadableStream);
+});
+
 function recordTransaction(tx: Transaction) {
   transactions.push(tx);
   // TODO(kamo): also insert into ClickHouse `transactions` table when CLICKHOUSE_URL is set.

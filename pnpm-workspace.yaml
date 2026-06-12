@@ -3,3 +3,7 @@ packages:
   - agents/*
   - skills/*
   - packages/*
+
+allowBuilds:
+  esbuild: true
+  sharp: true
