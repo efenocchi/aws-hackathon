@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import {
   BedrockRuntimeClient,
   ConverseCommand,
@@ -27,26 +28,68 @@ Rules:
 - Cinematic, premium, modern. No text overlays in prompts (we add typography in post).
 - Return ONLY the JSON object, no markdown fences.`;
 
-/** Asks Claude (TrueFoundry gateway if configured, else Bedrock) for a storyboard. */
+/** Asks Claude (Fable 5) for a storyboard. */
 export async function directStoryboard(
   brief: string,
   shotCount: number,
 ): Promise<Storyboard> {
-  const user = `Brief: ${brief}\nShots: ${shotCount}`;
-  const raw = CONFIG.director.truefoundryApiKey
-    ? await viaTrueFoundry(user)
-    : await viaBedrock(user);
+  const raw = await complete(SYSTEM, `Brief: ${brief}\nShots: ${shotCount}`);
   const json = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
   const board = JSON.parse(json) as Storyboard;
   if (!board.shots?.length) throw new Error("director returned no shots");
   return board;
 }
 
-/** Generic completion against the same provider stack (TrueFoundry gateway if configured, else Bedrock). */
+/**
+ * Generic completion. Provider priority: Anthropic API (sponsor, Fable 5) ->
+ * TrueFoundry gateway (sponsor) -> Claude Code CLI (personal account, no key
+ * needed — local dev/demo) -> Bedrock (AWS creds fallback).
+ */
 export async function complete(system: string, user: string): Promise<string> {
-  return CONFIG.director.truefoundryApiKey
-    ? viaTrueFoundry(user, system)
-    : viaBedrock(user, system);
+  if (process.env.ANTHROPIC_API_KEY) return viaAnthropic(user, system);
+  if (CONFIG.director.truefoundryApiKey) return viaTrueFoundry(user, system);
+  if (await claudeCliAvailable()) return viaClaudeCode(user, system);
+  return viaBedrock(user, system);
+}
+
+let cliAvailable: boolean | null = null;
+async function claudeCliAvailable(): Promise<boolean> {
+  if (cliAvailable !== null) return cliAvailable;
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  cliAvailable = await promisify(execFile)("claude", ["--version"])
+    .then(() => true)
+    .catch(() => false);
+  return cliAvailable;
+}
+
+/** Headless Claude Code (`claude -p`) on the user's logged-in account — no API key. */
+async function viaClaudeCode(user: string, system: string = SYSTEM): Promise<string> {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { stdout } = await promisify(execFile)(
+    "claude",
+    ["-p", user, "--append-system-prompt", system, "--max-turns", "1"],
+    { maxBuffer: 10 * 1024 * 1024, timeout: 180_000 },
+  );
+  const text = stdout.trim();
+  if (!text) throw new Error("empty Claude Code response");
+  return text;
+}
+
+async function viaAnthropic(user: string, system: string = SYSTEM): Promise<string> {
+  const client = new Anthropic();
+  const res = await client.messages.create({
+    // Fable 5: thinking always on (omit the param), no sampling params accepted.
+    model: process.env.ANTHROPIC_MODEL ?? "claude-fable-5",
+    max_tokens: 16000,
+    system,
+    messages: [{ role: "user", content: user }],
+  });
+  if (res.stop_reason === "refusal") throw new Error("director refused the brief");
+  const text = res.content.find((b) => b.type === "text")?.text;
+  if (!text) throw new Error("empty Anthropic response");
+  return text;
 }
 
 async function viaBedrock(user: string, system: string = SYSTEM): Promise<string> {

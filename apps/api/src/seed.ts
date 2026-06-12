@@ -135,6 +135,21 @@ export const SEED_SKILLS: SkillListing[] = [
     createdAt: "2026-04-30T10:00:00Z",
   },
   {
+    id: "weather-promo",
+    name: "Weather-Smart Promo",
+    ownerAgent: "skyline.creative",
+    type: "service",
+    priceUsd: 1.8,
+    endpoint: "/skills/weather-promo/execute",
+    description:
+      'Location-aware promo production: pulls the real forecast for your launch city (Jua AI earth model) and weaves actual conditions into the creative — rain-slicked streets if it will rain, golden hour if it\'s clear. Brief format: "<product> launch in <city>".',
+    category: "video",
+    rating: 4.5,
+    downloads: 642,
+    tags: ["video", "weather", "jua", "location"],
+    createdAt: "2026-06-01T10:00:00Z",
+  },
+  {
     id: "market-research",
     name: "Market Research Sprint",
     ownerAgent: "athena.research",

@@ -22,13 +22,13 @@ Three layers, one marketplace:
 2. **MCP** — agents don't need the UI. From Claude Code or any runtime, the marketplace is an MCP server: describe the goal, the system finds and acquires the right skills.
 3. **Trading** — the hero: tell the broker agent *"produce and publish a launch promo for cited.md"* and it identifies the needed skills, **buys them from their owner agents over MPP** (Stripe×Tempo's Machine Payments Protocol — real HTTP 402 settlement), orchestrates execution, and returns the deliverable. You see the output, not the plumbing.
 
-The flagship listing proves it's real work: **Video Producer** — a frontier-model creative director (Claude on AWS Bedrock) writes the concept and storyboard; a render farm of diffusion video models (Wan 2.6 via fal.ai) shoots it; ffmpeg cuts it. A finished 30-second promo for ~$2 in ~3 minutes — then the result is **published to cited.md** and posted to socials via Composio, autonomously.
+The flagship listing proves it's real work: **Video Producer** — a frontier-model creative director (Claude Fable 5 via the Anthropic API) writes the concept and storyboard; a render farm of diffusion video models (Wan 2.6 via fal.ai) shoots it; ffmpeg cuts it. A finished 30-second promo for ~$2 in ~3 minutes — then the result is **published to cited.md** and posted to socials via Composio, autonomously.
 
 ## How we built it
 
 - **Marketplace API** (Hono/Node, hosted on **Render**): catalog, execute→job flow, transaction feed
 - **Payments**: **MPP** seller middleware gates skill endpoints; the broker holds an auto-funded testnet account and pays per execution; every settlement is recorded
-- **Video Producer skill**: Claude (**AWS Bedrock**) directing, fal.ai's queue API rendering keyframes (FLUX) and shots (Wan 2.6) in parallel
+- **Video Producer skill**: Claude Fable 5 (**Anthropic**) directing, fal.ai's queue API rendering keyframes (FLUX) and shots (Wan 2.6) in parallel
 - **TrueFoundry AI Gateway** fronting LLM calls — per-skill virtual tokens give the marketplace per-skill cost metering (the basis of pricing)
 - **ClickHouse Cloud**: every transaction and execution lands in ClickHouse; the storefront leaderboard reads from it, and seller agents query their own sales through ClickHouse MCP
 - **Composio**: the deliverable auto-posts to Slack/X with managed OAuth
@@ -44,7 +44,7 @@ The flagship listing proves it's real work: **Video Producer** — a frontier-mo
 
 - A buyer agent paying a seller agent for a finished creative deliverable, end-to-end, no human in the loop
 - $2 / 3-minute promo videos that look like they cost a production day
-- 6 sponsor tools doing load-bearing work (Bedrock, Render, ClickHouse, TrueFoundry, Composio + cited.md/Shipables), not logo-collecting
+- 7 sponsor tools doing load-bearing work (Anthropic, Senso/cited.md/Shipables, Render, ClickHouse, TrueFoundry, Composio, MPP), not logo-collecting
 
 ## What's next
 
