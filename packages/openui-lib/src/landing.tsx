@@ -1,145 +1,123 @@
 /**
- * OpenUI (sponsor) — landing-page component library. This is the flagship
- * deliverable surface: a seller agent designs a real, polished launch page for
- * the buyer's product by emitting OpenUI Lang against these components, which
- * the storefront renders live with <Renderer>. No image/video spend — the
- * "creative" is generative UI.
+ * OpenUI (sponsor) — landing-page deliverable. ONE self-contained component
+ * with flat, structured props (no nested component references — those don't
+ * materialize through the Renderer). The seller agent emits a single
+ * LandingPage(...) call; the storefront renders the whole launch page live.
  */
-import { createLibrary, defineComponent } from "@openuidev/react-lang";
+import { createLibrary, createParser, defineComponent } from "@openuidev/react-lang";
 import { z } from "zod/v4";
 
-const wrap: React.CSSProperties = {
-  fontFamily: "'Inter Tight', -apple-system, sans-serif",
-  color: "#141413",
-};
+const font = "'Inter Tight', -apple-system, sans-serif";
 
-const Hero = defineComponent({
-  name: "Hero",
-  description:
-    "Top hero band: big headline (use accentWord to italic-accent one phrase), a subheadline, and a primary call-to-action button. The launch's first impression.",
-  props: z.object({
-    eyebrow: z.string().describe("Small uppercase label above the headline, e.g. the brand or category"),
-    headline: z.string().describe("Main headline"),
-    accentWord: z.string().describe("A short phrase inside the headline to render in serif italic; leave empty to skip"),
-    subhead: z.string().describe("One or two sentence supporting line"),
-    ctaLabel: z.string().describe("Primary button text"),
-  }),
-  component: ({ eyebrow, headline, accentWord, subhead, ctaLabel }) => {
-    const parts = accentWord && headline.includes(accentWord)
-      ? headline.split(accentWord)
-      : [headline];
+export interface LandingProps {
+  eyebrow: string;
+  headline: string;
+  accentWord: string;
+  subhead: string;
+  ctaLabel: string;
+  featuresHeading: string;
+  features: Array<{ title: string; body: string }>;
+  stats: Array<{ value: string; label: string }>;
+  quote: string;
+  quoteAuthor: string;
+  closingHeadline: string;
+  closingCta: string;
+}
+
+/** The landing page as a plain React component — rendered directly from parsed props. */
+export function LandingPageView(p: LandingProps) {
+  {
+    const hp = p.accentWord && p.headline.includes(p.accentWord)
+      ? p.headline.split(p.accentWord)
+      : [p.headline];
     return (
-      <section style={{ ...wrap, padding: "64px 56px 56px", background: "linear-gradient(180deg,#faf9f7,#fff)" }}>
-        <div style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#887c71", fontWeight: 600 }}>{eyebrow}</div>
-        <h1 style={{ fontSize: 52, lineHeight: 1.04, letterSpacing: "-0.03em", fontWeight: 500, margin: "18px 0 0", maxWidth: 720 }}>
-          {parts[0]}
-          {parts.length > 1 && <em style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 400 }}>{accentWord}</em>}
-          {parts[1]}
-        </h1>
-        <p style={{ fontSize: 19, lineHeight: 1.5, color: "rgba(20,20,19,0.6)", margin: "20px 0 28px", maxWidth: 560 }}>{subhead}</p>
-        <button style={{ background: "#141413", color: "#fff", border: "none", borderRadius: 14, padding: "15px 30px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>{ctaLabel}</button>
-      </section>
-    );
-  },
-});
+      <div style={{ font, fontFamily: font, color: "#141413", border: "1px solid #ece9e6", borderRadius: 16, overflow: "hidden", background: "#fff" }}>
+        {/* Hero */}
+        <section style={{ padding: "56px 48px 48px", background: "linear-gradient(180deg,#faf9f7,#fff)" }}>
+          <div style={{ fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "#887c71", fontWeight: 600 }}>{p.eyebrow}</div>
+          <h1 style={{ fontSize: 46, lineHeight: 1.05, letterSpacing: "-0.03em", fontWeight: 500, margin: "16px 0 0", maxWidth: 640 }}>
+            {hp[0]}
+            {hp.length > 1 && <em style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 400 }}>{p.accentWord}</em>}
+            {hp[1]}
+          </h1>
+          <p style={{ fontSize: 18, lineHeight: 1.5, color: "rgba(20,20,19,0.6)", margin: "18px 0 26px", maxWidth: 520 }}>{p.subhead}</p>
+          <button style={{ background: "#141413", color: "#fff", border: "none", borderRadius: 13, padding: "14px 28px", fontSize: 15.5, fontWeight: 600 }}>{p.ctaLabel}</button>
+        </section>
 
-const FeatureGrid = defineComponent({
-  name: "FeatureGrid",
-  description: "A grid of 3-4 product features, each a short title + one-line description.",
-  props: z.object({
-    heading: z.string().describe("Section heading"),
-    features: z.array(z.object({
-      title: z.string(),
-      body: z.string().describe("One sentence"),
-    })).describe("3 or 4 features"),
-  }),
-  component: ({ heading, features }) => (
-    <section style={{ ...wrap, padding: "48px 56px", borderTop: "1px solid #ece9e6" }}>
-      <h2 style={{ fontSize: 30, fontWeight: 500, letterSpacing: "-0.02em", margin: "0 0 28px" }}>{heading}</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 22 }}>
-        {features.map((f, i) => (
-          <div key={i} style={{ background: "#faf9f7", borderRadius: 18, padding: "22px 24px" }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: "#141413", color: "#fff", display: "grid", placeItems: "center", fontWeight: 600, marginBottom: 14 }}>{i + 1}</div>
-            <div style={{ fontWeight: 600, fontSize: 16.5, marginBottom: 6 }}>{f.title}</div>
-            <div style={{ color: "rgba(20,20,19,0.6)", fontSize: 14, lineHeight: 1.5 }}>{f.body}</div>
+        {/* Features */}
+        <section style={{ padding: "44px 48px", borderTop: "1px solid #ece9e6" }}>
+          <h2 style={{ fontSize: 27, fontWeight: 500, letterSpacing: "-0.02em", margin: "0 0 24px" }}>{p.featuresHeading}</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 18 }}>
+            {p.features.map((f, i) => (
+              <div key={i} style={{ background: "#faf9f7", borderRadius: 16, padding: "20px 22px" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: "#141413", color: "#fff", display: "grid", placeItems: "center", fontWeight: 600, marginBottom: 12 }}>{i + 1}</div>
+                <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 5 }}>{f.title}</div>
+                <div style={{ color: "rgba(20,20,19,0.6)", fontSize: 13.5, lineHeight: 1.5 }}>{f.body}</div>
+              </div>
+            ))}
           </div>
-        ))}
+        </section>
+
+        {/* Stats */}
+        <section style={{ padding: "36px 48px", background: "#141413", color: "#fff", display: "flex", gap: 44, flexWrap: "wrap" }}>
+          {p.stats.map((s, i) => (
+            <div key={i}>
+              <div style={{ fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }}>{s.value}</div>
+              <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 13.5, marginTop: 3 }}>{s.label}</div>
+            </div>
+          ))}
+        </section>
+
+        {/* Quote */}
+        <section style={{ padding: "48px", borderTop: "1px solid #ece9e6" }}>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: 26, lineHeight: 1.35, margin: 0, maxWidth: 700 }}>“{p.quote}”</p>
+          <div style={{ color: "rgba(20,20,19,0.5)", fontSize: 14.5, marginTop: 16 }}>{p.quoteAuthor}</div>
+        </section>
+
+        {/* CTA */}
+        <section style={{ padding: "52px 48px", textAlign: "center", background: "linear-gradient(180deg,#fff,#faf9f7)", borderTop: "1px solid #ece9e6" }}>
+          <h2 style={{ fontSize: 31, fontWeight: 500, letterSpacing: "-0.02em", margin: "0 0 20px" }}>{p.closingHeadline}</h2>
+          <button style={{ background: "#141413", color: "#fff", border: "none", borderRadius: 13, padding: "14px 32px", fontSize: 15.5, fontWeight: 600 }}>{p.closingCta}</button>
+        </section>
       </div>
-    </section>
-  ),
+    );
+  }
+}
+
+const landingProps = z.object({
+  eyebrow: z.string().describe("Small uppercase kicker above the headline (brand or category)"),
+  headline: z.string().describe("Main hero headline"),
+  accentWord: z.string().describe("A short phrase that appears inside headline to italic-accent; or empty"),
+  subhead: z.string().describe("One or two sentence supporting line under the headline"),
+  ctaLabel: z.string().describe("Primary hero button text, e.g. 'Pre-order — $129'"),
+  featuresHeading: z.string().describe("Heading for the features section"),
+  features: z.array(z.object({ title: z.string(), body: z.string().describe("one sentence") })).describe("3 or 4 product features"),
+  stats: z.array(z.object({ value: z.string(), label: z.string() })).describe("2 to 4 traction/impact metrics"),
+  quote: z.string().describe("A testimonial quote"),
+  quoteAuthor: z.string().describe("Name, role of the testimonial author"),
+  closingHeadline: z.string().describe("Closing call-to-action headline"),
+  closingCta: z.string().describe("Closing button text"),
 });
 
-const StatBar = defineComponent({
-  name: "StatBar",
-  description: "A row of 2-4 headline metrics (big number + label). Use for traction/impact figures.",
-  props: z.object({
-    stats: z.array(z.object({
-      value: z.string().describe("The number, e.g. '57%' or '$2'"),
-      label: z.string().describe("What it measures"),
-    })).describe("2 to 4 stats"),
-  }),
-  component: ({ stats }) => (
-    <section style={{ ...wrap, padding: "40px 56px", background: "#141413", color: "#fff", display: "flex", gap: 48, flexWrap: "wrap" }}>
-      {stats.map((s, i) => (
-        <div key={i}>
-          <div style={{ fontSize: 40, fontWeight: 600, letterSpacing: "-0.02em" }}>{s.value}</div>
-          <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, marginTop: 4 }}>{s.label}</div>
-        </div>
-      ))}
-    </section>
-  ),
-});
-
-const Quote = defineComponent({
-  name: "Quote",
-  description: "A single testimonial quote with attribution.",
-  props: z.object({
-    text: z.string().describe("The quote"),
-    author: z.string().describe("Name, role"),
-  }),
-  component: ({ text, author }) => (
-    <section style={{ ...wrap, padding: "52px 56px", borderTop: "1px solid #ece9e6" }}>
-      <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: 28, lineHeight: 1.35, letterSpacing: "-0.01em", margin: 0, maxWidth: 760 }}>“{text}”</p>
-      <div style={{ color: "rgba(20,20,19,0.5)", fontSize: 15, marginTop: 18 }}>{author}</div>
-    </section>
-  ),
-});
-
-const CTA = defineComponent({
-  name: "CTA",
-  description: "Closing call-to-action band with a headline and button.",
-  props: z.object({
-    headline: z.string(),
-    buttonLabel: z.string(),
-  }),
-  component: ({ headline, buttonLabel }) => (
-    <section style={{ ...wrap, padding: "56px", textAlign: "center", background: "linear-gradient(180deg,#fff,#faf9f7)", borderTop: "1px solid #ece9e6" }}>
-      <h2 style={{ fontSize: 34, fontWeight: 500, letterSpacing: "-0.02em", margin: "0 0 22px" }}>{headline}</h2>
-      <button style={{ background: "#141413", color: "#fff", border: "none", borderRadius: 14, padding: "15px 34px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>{buttonLabel}</button>
-    </section>
-  ),
-});
-
+// Registered so the agent emits valid OpenUI Lang and we can parse/validate it.
 const LandingPage = defineComponent({
   name: "LandingPage",
   description:
-    "Root container for the whole launch page. Compose it from a Hero, then any mix of FeatureGrid / StatBar / Quote, ending with a CTA. Pass the sections as children in order.",
-  props: z.object({
-    sections: z.array(z.any()).describe("The page sections in order (Hero first, CTA last)"),
-  }),
-  component: ({ sections }) => (
-    <div style={{ ...wrap, border: "1px solid #ece9e6", borderRadius: 18, overflow: "hidden", background: "#fff" }}>
-      {sections}
-    </div>
-  ),
+    "A complete, polished product launch page. Fill every field with real, specific, premium marketing copy for the product in the brief. Emit exactly one LandingPage call.",
+  props: landingProps,
+  component: LandingPageView,
 });
 
-export const landingLibrary = createLibrary({
-  components: [LandingPage, Hero, FeatureGrid, StatBar, Quote, CTA],
-  root: "LandingPage",
-});
+export const landingLibrary = createLibrary({ components: [LandingPage], root: "LandingPage" });
+
+/** Parse agent OpenUI Lang -> resolved LandingProps (renders via LandingPageView). */
+export function parseLanding(openuiLang: string): LandingProps | null {
+  const r = createParser(landingLibrary.toJSONSchema()).parse(openuiLang);
+  const props = (r.root as { props?: LandingProps } | null)?.props;
+  return props && props.headline ? props : null;
+}
 
 export const LANDING_SYSTEM_PROMPT = landingLibrary.prompt({
   preamble:
-    "You are a senior product designer and copywriter. Given a product brief, design a complete, polished launch landing page. Write real, specific, confident marketing copy — invent plausible features, metrics, and a testimonial that fit the product. Compose: root = LandingPage with a sections array that ALWAYS starts with a Hero, includes a FeatureGrid and a StatBar and a Quote in a sensible order, and ends with a CTA. Use the accentWord to italicize one evocative phrase in the hero headline. Keep copy tight and premium — no filler, no lorem ipsum.",
+    "You are a senior product designer and copywriter. Given a product brief, design a complete launch page by emitting EXACTLY ONE LandingPage(...) call with every field filled. Write real, specific, premium marketing copy — invent plausible features, metrics, and a testimonial that fit the product. Pick an evocative accentWord that actually appears inside the headline. No lorem ipsum, no filler.",
 });

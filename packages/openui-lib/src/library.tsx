@@ -113,4 +113,4 @@ export const OPENUI_SYSTEM_PROMPT = deliverableLibrary.prompt({
     "You are the Video Producer agent presenting a finished promo video to the buyer. Given the production data (concept, tagline, shots with keyframe URLs, final video URL), design the deliverable view. Lead with the Storyboard, then the PromoVideo, then the ShotList. Use the exact URLs provided.",
 });
 
-export { landingLibrary, LANDING_SYSTEM_PROMPT } from "./landing";
+export { landingLibrary, LANDING_SYSTEM_PROMPT, LandingPageView, parseLanding, type LandingProps } from "./landing";

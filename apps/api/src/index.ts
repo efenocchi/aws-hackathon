@@ -17,7 +17,7 @@ import {
   type PaymentVariables,
 } from "@aas/payments";
 import { complete, produceVideo } from "@aas/video-producer";
-import { OPENUI_SYSTEM_PROMPT, LANDING_SYSTEM_PROMPT } from "@aas/openui-lib";
+import { OPENUI_SYSTEM_PROMPT, LANDING_SYSTEM_PROMPT, parseLanding } from "@aas/openui-lib";
 import { publishToCited } from "./senso.js";
 import { insertTransaction } from "./clickhouse.js";
 import { announceDeliverable, composioEnabled } from "./composio.js";
@@ -249,10 +249,12 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
       let openui = await complete(LANDING_SYSTEM_PROMPT, req.brief);
       const fence = openui.match(/```(?:\w+)?\n([\s\S]*?)```/);
       if (fence) openui = fence[1];
+      const landingProps = parseLanding(openui);
+      if (!landingProps) throw new Error("designer produced no valid landing page");
       log("🎨 Launch page designed (OpenUI Lang)");
       job.deliverable = {
         url: `openui:landing`,
-        extras: { openui, landing: "1", brief: req.brief },
+        extras: { openui, landing: "1", landingProps: JSON.stringify(landingProps), brief: req.brief },
       };
       break;
     }
