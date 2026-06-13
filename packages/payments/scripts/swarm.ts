@@ -21,13 +21,15 @@ const EXCLUDED = new Set(
   (process.env.SWARM_EXCLUDE ?? "video-producer,weather-promo,copywriter").split(","),
 );
 
+// Concrete product concepts: they read well in research/social copy AND give
+// the poster-studio image model something it can actually draw.
 const BRIEFS = [
-  "launch teaser for a niche perfume brand",
-  "competitive scan of agent skill registries",
-  "weekly social calendar for a devtools launch",
-  "positioning notes for an AI hardware wearable",
-  "go-to-market sketch for a micro-SaaS",
-  "trend brief: agentic commerce this quarter",
+  "launch of a niche perfume — amber glass bottle, dusk light, quiet luxury",
+  "limited-edition mechanical keyboard for developers, brushed aluminum, midnight palette",
+  "specialty coffee subscription for remote engineering teams",
+  "AI hardware wearable: a discreet brass pin with ambient light",
+  "indie studio launching a cozy space-exploration game",
+  "electric cargo bike for city families, cream and forest green",
 ];
 
 const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];

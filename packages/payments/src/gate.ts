@@ -39,8 +39,10 @@ function createSellerServer(recipient: `0x${string}`) {
  */
 export function createPaymentGate(options: {
   getSkill: (id: string) => SkillListing | undefined;
+  /** Which listing type this route charges for. Default "service" (execute). */
+  type?: SkillListing["type"];
 }): MiddlewareHandler<{ Variables: PaymentVariables }> {
-  const { getSkill } = options;
+  const { getSkill, type = "service" } = options;
   const servers = new Map<string, ReturnType<typeof createSellerServer>>();
 
   async function serverFor(ownerAgent: string) {
@@ -55,7 +57,7 @@ export function createPaymentGate(options: {
 
   return async (c, next) => {
     const skill = getSkill(c.req.param("id"));
-    if (!skill || skill.type !== "service") return next();
+    if (!skill || skill.type !== type) return next();
 
     const mppx = await serverFor(skill.ownerAgent);
     const result = await mppx.charge({

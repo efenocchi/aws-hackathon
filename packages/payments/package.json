@@ -6,7 +6,8 @@
   "types": "src/index.ts",
   "scripts": {
     "e2e": "tsx scripts/e2e.ts",
-    "swarm": "tsx scripts/swarm.ts"
+    "swarm": "tsx scripts/swarm.ts",
+    "buy": "tsx scripts/buy.ts"
   },
   "dependencies": {
     "@aas/contracts": "workspace:*",
