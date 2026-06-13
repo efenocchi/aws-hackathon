@@ -1,6 +1,6 @@
 "use client";
 
-import { deliverableLibrary } from "@aas/openui-lib";
+import { deliverableLibrary, LandingPageView } from "@aas/openui-lib";
 import { Renderer } from "@openuidev/react-lang";
 import {
   Clapperboard,
@@ -230,9 +230,11 @@ export default function Store() {
 
 function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
   const [brief, setBrief] = useState(
-    skill.id === "video-producer"
-      ? "A 30-second launch promo for cited.md — the publishing endpoint of the agentic web. Premium, cinematic, optimistic."
-      : "",
+    skill.id === "landing-page"
+      ? "A launch page for Lumen — a smart desk lamp that syncs its light to your circadian rhythm."
+      : skill.id === "video-producer"
+        ? "A 30-second launch promo for cited.md — the publishing endpoint of the agentic web. Premium, cinematic, optimistic."
+        : "",
   );
   const [job, setJob] = useState<Job | null>(null);
   const [busy, setBusy] = useState(false);
@@ -240,7 +242,8 @@ function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
 
   const execute = useCallback(async () => {
     setBusy(true);
-    const res = await fetch(`${API}/skills/${skill.id}/execute`, {
+    // /buy: the house-buyer agent settles the MPP payment, then runs the skill.
+    const res = await fetch(`${API}/skills/${skill.id}/buy`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ brief, buyerAgent: "human.via.storefront" }),
@@ -310,7 +313,12 @@ function SkillModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
             {job.status === "failed" && <div style={{ color: "#e8927c" }}>✗ {job.error}</div>}
           </div>
         )}
-        {job?.deliverable?.extras?.openui ? (
+        {job?.deliverable?.extras?.landingProps ? (
+          <div className="ouiWrap">
+            <div className="ouiLabel">Launch page — designed by {skill.ownerAgent} (OpenUI)</div>
+            <LandingPageView {...JSON.parse(job.deliverable.extras.landingProps)} />
+          </div>
+        ) : job?.deliverable?.extras?.openui ? (
           <div className="ouiWrap">
             <div className="ouiLabel">Deliverable view — designed by {skill.ownerAgent} (OpenUI)</div>
             <Renderer
