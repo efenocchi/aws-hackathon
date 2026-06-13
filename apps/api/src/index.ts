@@ -55,10 +55,15 @@ app.get("/skills/:id", (c) => {
   return skill ? c.json(skill) : c.json({ error: "not found" }, 404);
 });
 
-// MPP payment gate: charges skill.priceUsd in pathUSD (Tempo testnet) to the
+// MPP payment gates: charge skill.priceUsd in pathUSD (Tempo testnet) to the
 // owner agent's wallet. Unpaid requests get a 402 challenge and never reach
-// the handler — no job, no transaction.
+// the handler — no job, no transaction. One gate per listing type so a
+// package purchase never charges on the execute route and vice versa.
 const paymentGate = createPaymentGate({ getSkill: (id) => skills.get(id) });
+const purchaseGate = createPaymentGate({
+  getSkill: (id) => skills.get(id),
+  type: "package",
+});
 
 app.post("/skills/:id/execute", paymentGate, async (c) => {
   const skill = skills.get(c.req.param("id"));
@@ -95,6 +100,7 @@ app.post("/skills/:id/execute", paymentGate, async (c) => {
     rail: "mpp",
     receipt: payment.reference,
     timestamp: now,
+    kind: "invocation",
   });
 
   runJob(skill, body, job).catch((err) => {
@@ -104,6 +110,45 @@ app.post("/skills/:id/execute", paymentGate, async (c) => {
   });
 
   return c.json({ jobId });
+});
+
+// One-time package buy: MPP-gated like execute, but delivers the artifact URL
+// instead of running a job. The settled trade hits the ledger + SSE like any
+// other transaction, tagged kind="purchase".
+app.post("/skills/:id/purchase", purchaseGate, async (c) => {
+  const skill = skills.get(c.req.param("id"));
+  if (!skill) return c.json({ error: "not found" }, 404);
+  if (skill.type !== "package")
+    return c.json({ error: "service skills are executed, not purchased" }, 400);
+  if (!skill.artifactUrl)
+    return c.json({ error: "listing has no artifact" }, 500);
+
+  const payment = c.get("paymentReceipt");
+  if (!payment) return c.json({ error: "payment receipt missing" }, 500);
+
+  const body = (await c.req.json().catch(() => ({}))) as { buyerAgent?: string };
+  const now = new Date().toISOString();
+  skill.downloads += 1;
+
+  recordTransaction({
+    txId: randomUUID(),
+    skillId: skill.id,
+    buyerAgent: body.buyerAgent ?? "anonymous.agent",
+    sellerAgent: skill.ownerAgent,
+    amountUsd: skill.priceUsd,
+    rail: "mpp",
+    receipt: payment.reference,
+    timestamp: now,
+    kind: "purchase",
+  });
+
+  return c.json({
+    skillId: skill.id,
+    artifactUrl: skill.artifactUrl,
+    sourceUrl: skill.sourceUrl,
+    receipt: payment.reference,
+    purchasedAt: now,
+  });
 });
 
 // Server-side buy: a "house buyer" agent pays the MPP gate on the caller's
@@ -357,11 +402,15 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
       break;
     }
     case "poster-studio": {
-      const result = await produceImage(
-        `Premium campaign key art: ${req.brief}. Cinematic lighting, rich color grading, editorial composition, no text or typography.`,
-        { onProgress: log },
-      );
-      job.deliverable = { url: result.url, extras: result.extras };
+      // Art-director pass: a diffusion model can't draw an abstract brief
+      // ("competitive scan of X"), so Claude first translates it into one
+      // concrete visual scene — same pattern as the video storyboard director.
+      const ART_DIRECTOR_SYSTEM =
+        "You are an art director. Turn the client brief into ONE image-generation prompt for a diffusion model: a single concrete scene with subject, environment, lighting, lens, mood and palette that visually embodies the brief's idea. Even abstract briefs become a tangible metaphor. No text, no typography, no logos in the image. Return ONLY the prompt, one paragraph.";
+      log(`🎨 Art director composing the scene: ${req.brief}`);
+      const visualPrompt = await complete(ART_DIRECTOR_SYSTEM, req.brief);
+      const result = await produceImage(visualPrompt, { onProgress: log });
+      job.deliverable = { url: result.url, extras: { ...result.extras, brief: req.brief } };
       break;
     }
     default:

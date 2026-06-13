@@ -7,6 +7,7 @@ import type {
   ExecuteRequest,
   ExecuteResponse,
   JobStatus,
+  PurchaseResponse,
   SkillListing,
 } from "@aas/contracts";
 
@@ -42,6 +43,17 @@ export class MarketClient {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+      },
+    );
+  }
+
+  purchase(id: string, buyerAgent: string): Promise<PurchaseResponse> {
+    return this.request<PurchaseResponse>(
+      `/skills/${encodeURIComponent(id)}/purchase`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buyerAgent }),
       },
     );
   }

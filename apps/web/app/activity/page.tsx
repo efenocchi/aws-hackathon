@@ -18,6 +18,7 @@ interface Tx {
   rail: string;
   receipt: string;
   timestamp: string;
+  kind?: "invocation" | "purchase";
 }
 
 interface Wallet {
@@ -193,7 +194,12 @@ export default function Activity() {
               {txs.slice(0, SHOWN_TXS).map((tx) => (
                 <tr key={tx.txId} className={tx.txId === latestTxId.current ? "txFresh" : undefined}>
                   <td className="txTime">{new Date(tx.timestamp).toLocaleTimeString()}</td>
-                  <td>{skillName(tx.skillId)}</td>
+                  <td>
+                    {skillName(tx.skillId)}
+                    {tx.kind === "purchase" && (
+                      <span className="badge service" style={{ marginLeft: 8 }}>bought</span>
+                    )}
+                  </td>
                   <td className="txAgents">
                     {tx.buyerAgent} → {tx.sellerAgent}
                   </td>

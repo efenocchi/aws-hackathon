@@ -88,12 +88,26 @@ export interface Transaction {
   /** Payment receipt id / tx hash from the rail, for the on-stage proof moment. */
   receipt: string;
   timestamp: string;
+  /** "invocation" = pay-per-execution of a service; "purchase" = one-time package buy. */
+  kind?: "invocation" | "purchase";
+}
+
+/** POST /skills/:id/purchase (MPP-gated) response — package skills only. */
+export interface PurchaseResponse {
+  skillId: string;
+  /** Where to download the purchased SKILL.md artifact. */
+  artifactUrl: string;
+  sourceUrl?: string;
+  /** On-chain payment reference (Tempo tx hash). */
+  receipt: string;
+  purchasedAt: string;
 }
 
 export const API_ROUTES = {
   catalog: "GET /skills?q=&category=",
   skill: "GET /skills/:id",
   execute: "POST /skills/:id/execute", // MPP middleware gates this
+  purchase: "POST /skills/:id/purchase", // MPP-gated one-time package buy
   job: "GET /jobs/:id",
   transactions: "GET /transactions", // leaderboard feed
   deliverables: "GET /deliverables?limit=", // succeeded jobs with artifacts, for the gallery

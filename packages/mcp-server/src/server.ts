@@ -123,6 +123,61 @@ export function buildMcpServer(market: MarketClient, buyer: Buyer): McpServer {
   );
 
   server.registerTool(
+    "buy_skill",
+    {
+      title: "Buy a package skill (auto-paid)",
+      description:
+        "Buy a 'package' skill outright: settles the one-time price on-chain from this server's testnet wallet and returns the artifactUrl of the purchased SKILL.md bundle plus the payment receipt. The trade is recorded on the marketplace ledger. To install: download the artifactUrl and write it to .claude/skills/<skillId>/SKILL.md with YAML frontmatter (name: <skillId>, description: the listing's description). Use execute_skill for type='service' listings instead.",
+      inputSchema: {
+        skillId: z.string().describe("Id of a type='package' skill from search_skills"),
+      },
+    },
+    async ({ skillId }) => {
+      // Same scoped payment capture as execute_skill, keyed to the purchase URL.
+      const payment: string[] = [];
+      let challenged = false;
+      let receipted = false;
+      const mine = (input: unknown) =>
+        String(input ?? "").includes(`/skills/${encodeURIComponent(skillId)}/purchase`);
+      const unsubscribe = [
+        buyer.mppx.on("challenge.received", (p) => {
+          if (mine(p.input)) {
+            challenged = true;
+            payment.push(`402 challenge: ${describeChallenge(p.challenge)}`);
+          }
+          return undefined;
+        }),
+        buyer.mppx.on("credential.created", (p) => {
+          if (mine(p.input)) payment.push(`credential created (${p.challenge.method})`);
+        }),
+        buyer.mppx.on("payment.response", (p) => {
+          if (mine(p.input)) {
+            const receipt = receiptOf(p.response);
+            if (receipt) receipted = true;
+            payment.push(`paid — receipt: ${receipt ?? "(no receipt header)"}`);
+          }
+        }),
+      ];
+      try {
+        const skill = await market.skill(skillId);
+        const purchase = await market.purchase(skillId, buyer.agentId);
+        if (skill.priceUsd > 0 && (!challenged || !receipted))
+          throw new Error(
+            `package ${skillId} ($${skill.priceUsd}) was delivered without an MPP challenge/receipt — purchase route is ungated, refusing unpaid delivery`,
+          );
+        return json({
+          ...purchase,
+          buyerAgent: buyer.agentId,
+          payment,
+          install: `Download artifactUrl and save as .claude/skills/${skillId}/SKILL.md with YAML frontmatter (name: ${skillId}, description: the listing's description).`,
+        });
+      } finally {
+        for (const off of unsubscribe) off();
+      }
+    },
+  );
+
+  server.registerTool(
     "job_status",
     {
       title: "Check job status",

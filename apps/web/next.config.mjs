@@ -12,6 +12,7 @@ export default {
       "/health",
       "/skills/:path*",
       "/transactions",
+      "/deliverables",
       "/wallets",
       "/events",
       "/jobs/:path*",

@@ -105,7 +105,8 @@ const LandingPage = defineComponent({
   description:
     "A complete, polished product launch page. Fill every field with real, specific, premium marketing copy for the product in the brief. Emit exactly one LandingPage call.",
   props: landingProps,
-  component: LandingPageView,
+  // The Renderer passes a {props} envelope, not the schema fields directly.
+  component: ({ props }) => <LandingPageView {...props} />,
 });
 
 export const landingLibrary = createLibrary({ components: [LandingPage], root: "LandingPage" });
