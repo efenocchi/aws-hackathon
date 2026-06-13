@@ -227,7 +227,7 @@ async function announceOnSocials(
 ) {
   if (!composioEnabled() || !job.deliverable) return;
   try {
-    log("📣 Posting the deliverable to Slack via Composio...");
+    log("📣 Publishing the deliverable to Notion via Composio...");
     await announceDeliverable({
       skillName: skill.name,
       buyerAgent: req.buyerAgent ?? "anonymous.agent",
@@ -236,7 +236,7 @@ async function announceOnSocials(
     });
     log("📣 Posted");
   } catch (err) {
-    log(`⚠️ Composio post skipped: ${String((err as Error).message)}`);
+    log(`⚠️ Composio Notion publish skipped: ${String((err as Error).message)}`);
   }
 }
 
@@ -298,7 +298,6 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
       const result = await produceVideo(req.brief, { onProgress: log, params: req.params });
       job.deliverable = { url: result.videoUrl, extras: result.extras };
       await attachOpenUI(job, log);
-      await announceOnSocials(job, skill, req, log);
       break;
     }
     case "copywriter": {
@@ -337,7 +336,6 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
       );
       job.deliverable = { url: result.videoUrl, extras: { ...result.extras, forecast: forecast.summary.slice(0, 500) } };
       await attachOpenUI(job, log);
-      await announceOnSocials(job, skill, req, log);
       break;
     }
     case "market-research": {
@@ -372,6 +370,7 @@ async function runJob(skill: SkillListing, req: ExecuteRequest, job: JobStatus) 
   }
 
   await publishToCitedMd(job, skill, req, log);
+  await announceOnSocials(job, skill, req, log);
   job.status = "succeeded";
   job.updatedAt = new Date().toISOString();
 }
