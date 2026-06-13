@@ -30,8 +30,11 @@ Verified end-to-end in one real purchase (buy → pay → design → publish):
 | **OpenUI** | Deliverable format: the agent emits OpenUI Lang, OpenUI's parser resolves it, we render it | `packages/openui-lib/src/landing.tsx` | Renders the launch page live |
 | **MPP** (Machine Payments Protocol) | Every purchase is a real HTTP-402 micropayment, settled on-chain (Tempo testnet) to the seller's wallet | `packages/payments/` | On-chain receipt; exact price moves buyer→seller |
 | **Senso / cited.md** | Every deliverable auto-publishes to the agent-native web so other agents can cite it | `apps/api/src/senso.ts` | `publish_status: success` on cited.md |
+| **ClickHouse** | Every transaction lands in ClickHouse Cloud; the live leaderboard reads from it | `apps/api/src/clickhouse.ts` | Table created + rows inserted on a live service |
+| **Pioneer** | The copywriter skill routes through Pioneer's adaptive inference (`pioneer/auto`) — every job is training signal | `apps/api/src/pioneer.ts` | Real completion returned |
+| **Composio** | The finale: every deliverable is published to Notion via a connected account, with managed OAuth | `apps/api/src/composio.ts` | Real Notion page created |
 
-Additional integrations are wired and switch on with a key: **ClickHouse** (`clickhouse.ts`, telemetry/leaderboard), **Composio** (`composio.ts`, publish to Notion), **Pioneer** (`pioneer.ts`, copywriter adaptive inference), **TrueFoundry** (gateway path in `director.ts`), **Render** (`render.yaml`, deploy).
+Wired and switch on with a key: **TrueFoundry** (gateway path in `director.ts`), **Render** (`render.yaml`, deploy).
 
 ---
 

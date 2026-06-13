@@ -21,7 +21,7 @@ export async function pioneerComplete(system: string, user: string): Promise<str
       "X-API-Key": process.env.PIONEER_API_KEY!,
     },
     body: JSON.stringify({
-      model: process.env.PIONEER_MODEL ?? "qwen3-8b",
+      model: process.env.PIONEER_MODEL ?? "pioneer/auto",
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
