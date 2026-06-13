@@ -206,7 +206,12 @@ body {
 .txRow { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
 .txRow:last-child { border-bottom: none; }
 .txAgents { color: var(--ink-40); font-size: 11.5px; margin-top: 2px; }
-.txAmount { color: var(--olive); font-weight: 700; white-space: nowrap; font-family: var(--rounded); }
+.txAmount { color: var(--olive); font-weight: 700; white-space: nowrap; font-family: var(--rounded); font-variant-numeric: tabular-nums; }
+
+/* Money typography — every amount renders through the <Usd> component */
+.money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.moneySym { font-size: 0.8em; font-weight: 600; opacity: 0.55; margin-right: 1px; }
+.moneyCents { font-size: 0.8em; font-weight: 600; opacity: 0.55; }
 .lbRow { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 14px; }
 .lbRank {
   width: 26px; height: 26px;
@@ -218,7 +223,7 @@ body {
   flex-shrink: 0;
 }
 .lbRow:first-child .lbRank { background: var(--ink); color: #fff; }
-.lbSales { margin-left: auto; color: var(--ink); font-weight: 700; font-family: var(--rounded); }
+.lbSales { margin-left: auto; color: var(--ink); font-weight: 700; font-family: var(--rounded); font-variant-numeric: tabular-nums; }
 
 /* Activity */
 .sectionLabel {
@@ -243,7 +248,7 @@ body {
   font-size: 12.5px;
   color: var(--ink-40);
 }
-.walletBal { font-size: 22px; font-weight: 600; color: var(--olive); font-family: var(--rounded); }
+.walletBal { font-size: 22px; font-weight: 600; color: var(--olive); font-family: var(--rounded); font-variant-numeric: tabular-nums; }
 .walletBal span { font-size: 12px; color: var(--ink-40); font-weight: 600; }
 .txTable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .txTable th {
@@ -258,6 +263,14 @@ body {
 }
 .txTable td { padding: 11px 14px 11px 0; border-bottom: 1px solid var(--line); }
 .txTable tr:last-child td { border-bottom: none; }
+.txTable th.thRight, .txTable td.txAmount { text-align: right; }
+
+/* Fresh trade: brief green settle flash that fades out */
+@keyframes settleFlash {
+  from { background: rgba(52, 199, 89, 0.16); }
+  to { background: transparent; }
+}
+.txTable tr.txFresh td { animation: settleFlash 2.2s ease-out forwards; }
 .txTime { color: var(--ink-40); white-space: nowrap; font-family: "SF Mono", ui-monospace, monospace; font-size: 12px; }
 .txReceipt { font-family: "SF Mono", ui-monospace, monospace; font-size: 12px; color: var(--warm-deep); }
 
@@ -364,3 +377,57 @@ video { width: 100%; border-radius: 20px; margin-top: 18px; background: var(--in
 .ouiShot figcaption { font-size: 11.5px; margin-top: 5px; line-height: 1.4; }
 .ouiShot figcaption b { display: block; }
 .ouiShot figcaption span { color: var(--ink-40); }
+
+/* ---- Gallery ---- */
+.galleryGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+.galleryCard {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s;
+}
+.galleryCard:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(20, 20, 19, 0.08); }
+.galleryMedia {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--mist);
+  border-bottom: 1px solid var(--line);
+}
+.galleryText {
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: var(--mist-2);
+  border-bottom: 1px solid var(--line);
+  padding: 16px 18px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-60);
+  white-space: pre-wrap;
+  overflow: hidden;
+  position: relative;
+  text-decoration: none;
+  word-break: break-word;
+}
+.galleryText::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 48px;
+  background: linear-gradient(transparent, var(--mist-2));
+}
+.galleryBody { padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 5px; }
+.galleryBrief {
+  font-size: 13px;
+  color: var(--ink-60);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.galleryMeta { display: flex; justify-content: space-between; gap: 10px; color: var(--ink-40); font-size: 12px; margin-top: 4px; }

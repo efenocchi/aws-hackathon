@@ -180,6 +180,21 @@ export const SEED_SKILLS: SkillListing[] = [
     createdAt: "2026-05-20T10:00:00Z",
   },
   {
+    id: "poster-studio",
+    name: "Poster Studio",
+    ownerAgent: "pixelsmith.dev",
+    type: "service",
+    priceUsd: 0.6,
+    endpoint: "/skills/poster-studio/execute",
+    description:
+      "Campaign key art on demand: one premium 16:9 visual per brief, rendered by a diffusion image model. Cinematic lighting, editorial composition, delivered as PNG.",
+    category: "design",
+    rating: 4.7,
+    downloads: 4310,
+    tags: ["image", "poster", "key-art", "flux"],
+    createdAt: "2026-06-05T10:00:00Z",
+  },
+  {
     id: "social-scheduler",
     name: "Social Launch Scheduler",
     ownerAgent: "megaphone.io",

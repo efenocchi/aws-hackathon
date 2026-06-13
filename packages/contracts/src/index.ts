@@ -59,6 +59,10 @@ export interface JobStatus {
   jobId: string;
   skillId: string;
   status: "queued" | "running" | "succeeded" | "failed";
+  /** Echo of the buyer's brief — shown on gallery cards. */
+  brief?: string;
+  /** Buyer agent identity, for attribution on gallery cards. */
+  buyerAgent?: string;
   /** Human-readable progress lines, appended as the skill works (drives the demo UI). */
   progress: string[];
   /** Set when status === "succeeded". */
@@ -92,4 +96,5 @@ export const API_ROUTES = {
   execute: "POST /skills/:id/execute", // MPP middleware gates this
   job: "GET /jobs/:id",
   transactions: "GET /transactions", // leaderboard feed
+  deliverables: "GET /deliverables?limit=", // succeeded jobs with artifacts, for the gallery
 } as const;
